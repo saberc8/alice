@@ -131,6 +131,3 @@ _, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
 
 - `cmd/init/main.go` - 初始化逻辑
 - `domain/rbac/entity/menu.go` - 菜单实体定义
-- `frontend/src/routes/sections/dashboard/frontend.tsx` - 前端路由配置
-- `frontend/src/layouts/dashboard/nav/nav-data/nav-data-frontend.tsx` - 导航数据配置
-- `docs/menu_init_data.sql` - 菜单结构说明

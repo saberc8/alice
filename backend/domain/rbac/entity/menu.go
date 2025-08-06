@@ -55,8 +55,12 @@ type MenuMeta struct {
 
 // Value 实现 driver.Valuer 接口，用于将 MenuMeta 转换为数据库值
 func (m MenuMeta) Value() (driver.Value, error) {
-	if m == (MenuMeta{}) {
-		return nil, nil
+	// 检查是否为空的MenuMeta
+	if m == (MenuMeta{}) ||
+		(m.Icon == nil && m.Caption == nil && m.Info == nil &&
+			m.Disabled == nil && m.Auth == nil && m.Hidden == nil &&
+			m.ExternalLink == nil && m.Component == nil) {
+		return "{}", nil // 返回空的JSON对象而不是null
 	}
 	return json.Marshal(m)
 }
@@ -78,7 +82,21 @@ func (m *MenuMeta) Scan(value interface{}) error {
 		return fmt.Errorf("cannot scan %T into MenuMeta", value)
 	}
 
-	return json.Unmarshal(bytes, m)
+	// 如果是空字节或空字符串，设置为空的MenuMeta
+	if len(bytes) == 0 || string(bytes) == "" || string(bytes) == "null" {
+		*m = MenuMeta{}
+		return nil
+	}
+
+	// 尝试解析JSON
+	if err := json.Unmarshal(bytes, m); err != nil {
+		// 如果解析失败，记录错误并设置为空的MenuMeta
+		fmt.Printf("Failed to unmarshal MenuMeta: %v, data: %s\n", err, string(bytes))
+		*m = MenuMeta{}
+		return nil // 不返回错误，避免中断整个查询
+	}
+
+	return nil
 }
 
 // Menu 菜单实体

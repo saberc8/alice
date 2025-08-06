@@ -4,7 +4,6 @@ import { useUserPermissions } from "@/store/userStore";
 import { checkAny } from "@/utils";
 import { useMemo } from "react";
 import { useBackendNavData } from "./nav-data-backend";
-import { frontendNavData } from "./nav-data-frontend";
 
 /**
  * 递归处理导航数据，过滤掉没有权限的项目
@@ -64,7 +63,7 @@ const filterNavData = (navData: any[], permissions: string[]) => {
  */
 export const useFilteredNavData = () => {
 	const backendNavData = useBackendNavData();
-	const navData = GLOBAL_CONFIG.routerMode === "backend" ? backendNavData : frontendNavData;
+	const navData = backendNavData;
 	const permissions = useUserPermissions();
 	const permissionCodes = useMemo(() => permissions.map((p) => p.code), [permissions]);
 	const filteredNavData = useMemo(() => filterNavData(navData, permissionCodes), [navData, permissionCodes]);
