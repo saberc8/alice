@@ -1,0 +1,130 @@
+import { Icon } from "@/components/icon";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
+import { Card } from "@/ui/card";
+import { Text } from "@/ui/typography";
+
+export default function ConnectionsTab() {
+	const items = [
+		{
+			avatar: "",
+			name: "",
+			title: "UI Designer",
+			tags: ["Figma", "Sketch"],
+			projects: "18",
+			tasks: "834",
+			connections: "129",
+			connected: true,
+		},
+		{
+			avatar: "",
+			name: "",
+			title: "Developer",
+			tags: ["Angular", "React"],
+			projects: "118",
+			tasks: "2.32k",
+			connections: "1.29k",
+			connected: false,
+		},
+		{
+			avatar: "",
+			name: "",
+			title: "Developer",
+			tags: ["Html", "React"],
+			projects: "32",
+			tasks: "1.25k",
+			connections: "890",
+			connected: false,
+		},
+		{
+			avatar: "",
+			name: "",
+			title: "UI/UX Designer",
+			tags: ["Figma", "Sketch", "Photoshop"],
+			projects: "86",
+			tasks: "12.4k",
+			connections: "890",
+			connected: false,
+		},
+		{
+			avatar: "",
+			name: "",
+			title: "Full Stack Developer",
+			tags: ["React", "Html", "Node.js"],
+			projects: "244",
+			tasks: "23.9k",
+			connections: "2.14k",
+			connected: true,
+		},
+		{
+			avatar: "",
+			name: "",
+			title: "SEO",
+			tags: ["Analysis", "Writing"],
+			projects: "32",
+			tasks: "1.28k",
+			connections: "1.27k",
+			connected: false,
+		},
+	];
+	return (
+		<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+			{items.map((item) => (
+				<Card className="w-full flex-col items-center" key={item.name}>
+					<img alt="" src={item.avatar} className="h-20 w-20 rounded-full" />
+
+					<Text variant="body1" className="mt-4 font-semibold">
+						{item.name}
+					</Text>
+					<Text variant="body2" className="opacity-50">
+						{item.title}
+					</Text>
+
+					<div className="mt-4 flex gap-4">
+						{item.tags.map((tag) => (
+							<Badge key={tag} variant="info">
+								{tag}
+							</Badge>
+						))}
+					</div>
+
+					<div className="mt-4 flex gap-4">
+						<div className="[ flex flex-col  items-center">
+							<Text variant="body1" className="text-xl font-semibold">
+								{item.projects}
+							</Text>
+							<Text variant="body2" className="opacity-60">
+								Projects
+							</Text>
+						</div>
+						<div className="[ flex flex-col  items-center">
+							<Text variant="body1" className="text-xl font-semibold">
+								{item.tasks}
+							</Text>
+							<Text variant="body2" className="opacity-60">
+								Tasks
+							</Text>
+						</div>
+						<div className="[ flex flex-col  items-center">
+							<Text variant="body1" className="text-xl font-semibold">
+								{item.connections}
+							</Text>
+							<Text variant="body2" className="opacity-60">
+								Tasks
+							</Text>
+						</div>
+					</div>
+
+					<div className="mt-4 flex">
+						<Button variant={item.connected ? "default" : "outline"}>
+							<Icon icon="ri:user-add-line" size={14} />
+							<Text variant="body2" className="ml-2">
+								CONNECTED
+							</Text>
+						</Button>
+					</div>
+				</Card>
+			))}
+		</div>
+	);
+}

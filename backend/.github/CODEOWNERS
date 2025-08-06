@@ -1,0 +1,53 @@
+# Code Owners for Alice Project
+
+# Global owners
+* @alice-maintainers
+
+# Backend Go code
+*.go @backend-team @alice-maintainers
+go.mod @backend-team @alice-maintainers  
+go.sum @backend-team @alice-maintainers
+
+# Domain layer - requires domain expert review
+/domain/ @domain-experts @alice-maintainers
+
+# Infrastructure layer - requires infrastructure review
+/infra/ @infrastructure-team @alice-maintainers
+
+# API layer - requires API review
+/api/ @api-team @alice-maintainers
+
+# Database migrations - requires DBA review
+/migrations/ @dba-team @alice-maintainers
+**/migrations/ @dba-team @alice-maintainers
+
+# Configuration files - requires ops review
+config.yaml @ops-team @alice-maintainers
+*.yaml @ops-team @alice-maintainers
+*.yml @ops-team @alice-maintainers
+
+# Docker and deployment - requires ops review
+Dockerfile @ops-team @alice-maintainers
+docker-compose*.yml @ops-team @alice-maintainers
+/k8s/ @ops-team @alice-maintainers
+
+# CI/CD workflows - requires platform team review
+/.github/workflows/ @platform-team @alice-maintainers
+
+# Documentation - requires technical writing review
+*.md @tech-writers @alice-maintainers
+/docs/ @tech-writers @alice-maintainers
+
+# Security sensitive files - requires security team review
+/api/middleware/ @security-team @alice-maintainers
+**/auth*.go @security-team @alice-maintainers
+**/jwt*.go @security-team @alice-maintainers
+**/middleware.go @security-team @alice-maintainers
+
+# Dependencies - requires security and backend team review
+go.mod @security-team @backend-team @alice-maintainers
+go.sum @security-team @backend-team @alice-maintainers
+
+# Package managers and build tools
+Makefile @backend-team @alice-maintainers
+/scripts/ @ops-team @alice-maintainers

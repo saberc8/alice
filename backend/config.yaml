@@ -1,0 +1,17 @@
+server:
+  port: ":8081"
+
+database:
+  host: "localhost"
+  port: 5432
+  username: "postgres"
+  password: "123456"
+  dbname: "alice"
+  sslmode: "disable"
+
+jwt:
+  secret_key: "alice-jwt-secret-key-2025"
+  expires_in: 24  # hours
+
+log:
+  level: "info"
