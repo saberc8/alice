@@ -71,7 +71,7 @@ func Load() *Config {
 	// 如果文件不存在或解析失败，使用环境变量和默认值
 	return &Config{
 		Server: ServerConfig{
-			Port: getEnv("SERVER_PORT", ":8080"),
+			Port: getEnv("SERVER_PORT", ":8090"),
 		},
 		Database: DatabaseConfig{
 			Host:     getEnv("DB_HOST", "localhost"),

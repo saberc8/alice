@@ -1,0 +1,21 @@
+{
+  "name": "alice",
+  "version": "1.0.0",
+  "description": "Alice full-stack application",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"cd backend && go run main.go\" \"cd frontend && pnpm run dev\"",
+    "dev:backend": "cd backend && go run main.go",
+    "dev:frontend": "cd frontend && pnpm run dev",
+    "build": "cd frontend && pnpm run build",
+    "build:backend": "cd backend && go build -o bin/alice main.go",
+    "install:frontend": "cd frontend && pnpm install",
+    "start": "./start.sh"
+  },
+  "keywords": ["alice", "go", "react", "full-stack"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

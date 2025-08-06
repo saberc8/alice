@@ -47,9 +47,12 @@ func main() {
 
 	// 初始化处理器
 	userHandler := handler.NewUserHandler(application.UserSvc)
+	roleHandler := handler.NewRoleHandler(application.RoleSvc)
+	permissionHandler := handler.NewPermissionHandler(application.PermissionSvc)
+	menuHandler := handler.NewMenuHandler(application.MenuSvc)
 
 	// 初始化路由
-	apiRouter := router.NewRouter(userHandler)
+	apiRouter := router.NewRouter(userHandler, roleHandler, permissionHandler, menuHandler)
 	r := apiRouter.SetupRoutes()
 
 	// 启动HTTP服务器

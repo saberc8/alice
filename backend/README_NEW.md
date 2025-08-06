@@ -75,7 +75,7 @@ make dev
 
 6. **测试接口**
 ```bash
-curl http://localhost:8081/health
+curl http://localhost:8090/health
 ```
 
 ### Docker 部署
@@ -343,7 +343,7 @@ make test-api
 ## 📚 API 文档
 
 API 文档使用 Swagger/OpenAPI 3.0 规范，访问地址：
-- 开发环境: http://localhost:8081/swagger/index.html
+- 开发环境: http://localhost:8090/swagger/index.html
 - 生产环境: https://api.alice.com/swagger/index.html
 
 ### 主要 API 端点
@@ -371,7 +371,7 @@ API 文档使用 Swagger/OpenAPI 3.0 规范，访问地址：
 
 | 变量名 | 描述 | 默认值 |
 |--------|------|--------|
-| `SERVER_PORT` | 服务端口 | `:8081` |
+| `SERVER_PORT` | 服务端口 | `:8090` |
 | `DB_HOST` | 数据库主机 | `localhost` |
 | `DB_PORT` | 数据库端口 | `5432` |
 | `DB_USERNAME` | 数据库用户名 | `postgres` |
@@ -383,7 +383,7 @@ API 文档使用 Swagger/OpenAPI 3.0 规范，访问地址：
 ```bash
 docker run -d \
   --name alice \
-  -p 8081:8081 \
+  -p 8090:8090 \
   -e DB_HOST=db \
   -e DB_PASSWORD=password \
   alice:latest

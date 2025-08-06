@@ -24,12 +24,23 @@ import (
 )
 
 type Router struct {
-	userHandler *handler.UserHandler
+	userHandler       *handler.UserHandler
+	roleHandler       *handler.RoleHandler
+	permissionHandler *handler.PermissionHandler
+	menuHandler       *handler.MenuHandler
 }
 
-func NewRouter(userHandler *handler.UserHandler) *Router {
+func NewRouter(
+	userHandler *handler.UserHandler,
+	roleHandler *handler.RoleHandler,
+	permissionHandler *handler.PermissionHandler,
+	menuHandler *handler.MenuHandler,
+) *Router {
 	return &Router{
-		userHandler: userHandler,
+		userHandler:       userHandler,
+		roleHandler:       roleHandler,
+		permissionHandler: permissionHandler,
+		menuHandler:       menuHandler,
 	}
 }
 
@@ -60,6 +71,9 @@ func (r *Router) SetupRoutes() *gin.Engine {
 			}
 		}
 	}
+
+	// 设置RBAC路由
+	SetupRBACRoutes(router, r.roleHandler, r.permissionHandler, r.menuHandler)
 
 	// 健康检查
 	router.GET("/health", func(c *gin.Context) {

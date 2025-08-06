@@ -1,9 +1,9 @@
-import { DB_MENU } from "@/_mock/assets_backup";
 import { Icon } from "@/components/icon";
 import type { NavItemDataProps, NavProps } from "@/components/nav";
 import type { MenuTree } from "@/types/entity";
 import { Badge } from "@/ui/badge";
 import { convertFlatToTree } from "@/utils/tree";
+import useUserStore from "@/store/userStore";
 
 const convertChildren = (children?: MenuTree[]): NavItemDataProps[] => {
 	if (!children?.length) return [];
@@ -29,4 +29,11 @@ const convert = (menuTree: MenuTree[]): NavProps["data"] => {
 	}));
 };
 
-export const backendNavData: NavProps["data"] = convert(convertFlatToTree(DB_MENU));
+// Hook to get dynamic nav data from user store
+export const useBackendNavData = (): NavProps["data"] => {
+	const userMenuTree = useUserStore((state) => state.userMenuTree);
+	return convert(userMenuTree);
+};
+
+// Export empty array as fallback for direct import (should use hook instead)
+export const backendNavData: NavProps["data"] = [];

@@ -1,10 +1,10 @@
-import { DB_MENU } from "@/_mock/assets_backup";
 import type { MenuMetaInfo, MenuTree } from "@/types/entity";
 import { PermissionType } from "@/types/enum";
 import { convertFlatToTree } from "@/utils/tree";
 import type { RouteObject } from "react-router";
 import { Navigate } from "react-router";
 import { Component } from "./utils";
+import useUserStore from "@/store/userStore";
 
 /**
  * get route path from menu path and parent path
@@ -91,4 +91,11 @@ const convertToRoute = (items: MenuTree[], parent?: MenuTree): RouteObject[] => 
 	return routes;
 };
 
-export const backendDashboardRoutes = convertToRoute(convertFlatToTree(DB_MENU));
+// Hook to get dynamic routes from user store
+export const useBackendDashboardRoutes = (): RouteObject[] => {
+	const userMenuTree = useUserStore((state) => state.userMenuTree);
+	return convertToRoute(userMenuTree);
+};
+
+// Export empty array as fallback for direct import (should use hook instead)
+export const backendDashboardRoutes: RouteObject[] = [];

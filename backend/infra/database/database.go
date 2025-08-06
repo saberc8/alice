@@ -22,6 +22,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
+	rbacEntity "alice/domain/rbac/entity"
 	"alice/domain/user/entity"
 	"alice/infra/config"
 	"alice/pkg/logger"
@@ -49,6 +50,15 @@ func InitDB(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 // autoMigrate 自动迁移数据库表
 func autoMigrate(db *gorm.DB) error {
 	return db.AutoMigrate(
+		// 用户表
 		&entity.User{},
+
+		// RBAC表
+		&rbacEntity.Role{},
+		&rbacEntity.Permission{},
+		&rbacEntity.Menu{},
+		&rbacEntity.UserRole{},
+		&rbacEntity.RolePermission{},
+		&rbacEntity.RoleMenu{},
 	)
 }

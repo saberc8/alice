@@ -19,14 +19,6 @@ export const frontendDashboardRoutes: RouteObject[] = [
 		],
 	},
 	{
-		path: "functions",
-		children: [
-			{ index: true, element: <Navigate to="clipboard" replace /> },
-			{ path: "clipboard", element: Component("/pages/functions/clipboard") },
-			{ path: "token_expired", element: Component("/pages/functions/token-expired") },
-		],
-	},
-	{
 		path: "management",
 		children: [
 			{ index: true, element: <Navigate to="user" replace /> },
@@ -39,15 +31,16 @@ export const frontendDashboardRoutes: RouteObject[] = [
 				],
 			},
 			{
-				path: "system",
+				path: "rbac",
 				children: [
-					{ index: true, element: <Navigate to="permission" replace /> },
-					{ path: "permission", element: Component("/pages/management/system/permission") },
-					{ path: "role", element: Component("/pages/management/system/role") },
-					{ path: "user", element: Component("/pages/management/system/user") },
-					{ path: "user/:id", element: Component("/pages/management/system/user/detail") },
+					{ index: true, element: Component("/pages/management/rbac") },
+					{ path: "users", element: Component("/pages/management/rbac/UserManagement") },
+					{ path: "roles", element: Component("/pages/management/rbac/RoleManagement") },
+					{ path: "permissions", element: Component("/pages/management/rbac/PermissionManagement") },
+					{ path: "menus", element: Component("/pages/management/rbac/MenuManagement") },
+					{ path: "demo", element: Component("/pages/management/rbac/demo") },
 				],
-			},
+			}
 		],
 	},
 	{
@@ -92,14 +85,5 @@ export const frontendDashboardRoutes: RouteObject[] = [
 			},
 		],
 	},
-	{
-		path: "permission",
-		children: [
-			{ index: true, element: Component("/pages/sys/others/permission") },
-			{ path: "page-test", element: Component("/pages/sys/others/permission/page-test") },
-		],
-	},
-	{ path: "calendar", element: Component("/pages/sys/others/calendar") },
-	{ path: "kanban", element: Component("/pages/sys/others/kanban") },
 	{ path: "blank", element: Component("/pages/sys/others/blank") },
 ];

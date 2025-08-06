@@ -1,6 +1,6 @@
 # Alice Go Backend Makefile
 
-.PHONY: build run clean test fmt vet deps help docker lint security coverage
+.PHONY: build run clean test fmt vet deps help docker lint security coverage init-data build-init
 
 # 默认目标
 .DEFAULT_GOAL := help
@@ -32,7 +32,7 @@ GOVET := $(GOCMD) vet
 
 ## help: 显示帮助信息
 help:
-	@echo "Alice Go Backend Project"
+	@echo "Alice Go Backend Project (with RBAC System)"
 	@echo ""
 	@echo "Available commands:"
 	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' | sed -e 's/^/ /'
@@ -96,6 +96,21 @@ build-local: clean
 run: build
 	./$(BUILD_DIR)/$(APP_NAME)
 
+## build-init: 编译数据初始化脚本
+build-init: deps fmt vet
+	mkdir -p $(BUILD_DIR)
+	$(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/init cmd/init/main.go
+
+## init-data: 运行数据初始化脚本（初始化RBAC数据）
+init-data: build-init
+	@echo "Initializing RBAC data..."
+	./$(BUILD_DIR)/init
+	@echo "RBAC data initialization completed!"
+
+## rbac-setup: 完整的RBAC系统设置
+rbac-setup: build build-init init-data
+	@echo "RBAC system setup completed!"
+
 ## dev: 开发模式运行（使用go run）
 dev:
 	$(GOCMD) run main.go
@@ -108,7 +123,7 @@ docker-build:
 ## docker-run: 运行Docker容器
 docker-run: docker-build
 	@echo "Running Docker container..."
-	docker run -p 8081:8081 --env-file .env $(DOCKER_IMAGE):$(DOCKER_TAG)
+	docker run -p 8090:8090 --env-file .env $(DOCKER_IMAGE):$(DOCKER_TAG)
 
 ## db-setup: 设置开发数据库
 db-setup:
@@ -144,7 +159,7 @@ docker-build:
 
 ## docker-run: 运行Docker容器
 docker-run:
-	docker run -p 8080:8080 --env-file .env $(APP_NAME):latest
+	docker run -p 8090:8090 --env-file .env $(APP_NAME):latest
 
 ## db-setup: 设置PostgreSQL数据库（需要Docker）
 db-setup:

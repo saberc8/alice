@@ -1,0 +1,98 @@
+-- Alice 项目菜单表初始化数据
+-- 本文件展示了基于前端路由配置生成的完整菜单结构
+
+-- 菜单表结构
+-- CREATE TABLE menus (
+--     id VARCHAR(36) PRIMARY KEY,
+--     parent_id VARCHAR(36),
+--     name VARCHAR(100) NOT NULL,
+--     code VARCHAR(100) UNIQUE NOT NULL,
+--     path VARCHAR(200),
+--     type INT NOT NULL DEFAULT 2, -- 0:分组 1:目录 2:菜单 3:按钮
+--     `order` INT DEFAULT 0,
+--     status VARCHAR(10) NOT NULL DEFAULT 'active',
+--     meta JSON,
+--     description VARCHAR(500),
+--     created_at TIMESTAMP,
+--     updated_at TIMESTAMP,
+--     INDEX idx_parent_id (parent_id)
+-- );
+
+-- 菜单数据层次结构：
+-- 
+-- 1. 仪表板 (Group)
+--    ├── 工作台 (/workbench)
+--    └── 分析页 (/analysis)
+--
+-- 2. 页面管理 (Group)
+--    ├── 系统管理 (/management)
+--    │   ├── 用户管理 (/management/user)
+--    │   │   ├── 用户资料 (/management/user/profile)
+--    │   │   └── 账户管理 (/management/user/account)
+--    │   └── 权限管理 (/management/rbac)
+--    │       ├── 权限概览 (/management/rbac)
+--    │       ├── 用户管理 (/management/rbac/users)
+--    │       ├── 角色管理 (/management/rbac/roles)
+--    │       ├── 权限管理 (/management/rbac/permissions)
+--    │       ├── 菜单管理 (/management/rbac/menus)
+--    │       └── 权限演示 (/management/rbac/demo)
+--    ├── 多级菜单 (/menu_level)
+--    │   ├── 菜单1-a (/menu_level/1a)
+--    │   └── 菜单1-b (/menu_level/1b)
+--    │       ├── 菜单2-a (/menu_level/1b/2a)
+--    │       └── 菜单2-b (/menu_level/1b/2b)
+--    │           ├── 菜单3-a (/menu_level/1b/2b/3a)
+--    │           └── 菜单3-b (/menu_level/1b/2b/3b)
+--    └── 错误页面 (/error)
+--        ├── 403无权限 (/error/403)
+--        ├── 404未找到 (/error/404)
+--        └── 500服务器错误 (/error/500)
+--
+-- 3. UI组件 (Group)
+--    └── 组件 (/components)
+--        ├── 图标 (/components/icon)
+--        ├── 动画 (/components/animate)
+--        ├── 滚动 (/components/scroll)
+--        ├── 上传 (/components/upload)
+--        ├── 图表 (/components/chart)
+--        └── 消息提示 (/components/toast)
+--
+-- 4. 其他 (Group)
+--    ├── 禁用菜单 (/disabled) [disabled]
+--    ├── 标签菜单 (#label) [with badge]
+--    ├── 外部链接 (/link)
+--    │   ├── 外部链接 (/link/external-link)
+--    │   └── 内嵌页面 (/link/iframe)
+--    └── 空白页 (/blank)
+
+-- 菜单类型说明：
+-- MenuTypeGroup = 0     // 分组 - 用于菜单分组，如"仪表板"、"页面管理"等
+-- MenuTypeCatalogue = 1 // 目录 - 有子菜单但本身不是页面，如"系统管理"、"多级菜单"等  
+-- MenuTypeMenu = 2      // 菜单 - 具体的页面菜单，如"工作台"、"用户资料"等
+-- MenuTypeButton = 3    // 按钮 - 页面内的操作按钮权限
+
+-- Meta字段说明：
+-- {
+--   "icon": "图标名称",
+--   "caption": "菜单说明文字", 
+--   "info": "标签信息，如New、Hot等",
+--   "disabled": true/false,
+--   "auth": true/false,
+--   "hidden": true/false,
+--   "external_link": "外部链接地址",
+--   "component": "前端组件路径"
+-- }
+
+-- 注意事项：
+-- 1. 所有的title/name已经改为中文，不再使用i18n键值
+-- 2. 菜单路径与前端路由配置保持一致
+-- 3. Component路径对应前端页面组件的实际路径
+-- 4. 菜单的order字段用于控制显示顺序
+-- 5. 分组类型的菜单没有path和component，仅用于分类组织
+-- 6. 目录类型的菜单有path但通常没有component，用于路由层级结构
+-- 7. 菜单类型的菜单既有path又有component，对应具体的页面
+
+-- 使用方法：
+-- 运行初始化命令：./bin/init
+-- 这将执行 cmd/init/main.go 中的 initMenus 函数，
+-- 按照上述结构创建完整的菜单数据

@@ -40,25 +40,7 @@ export const frontendNavData: NavProps["data"] = [
 								path: "/management/user/account",
 							},
 						],
-					},
-					{
-						title: "sys.nav.system.index",
-						path: "/management/system",
-						children: [
-							{
-								title: "sys.nav.system.permission",
-								path: "/management/system/permission",
-							},
-							{
-								title: "sys.nav.system.role",
-								path: "/management/system/role",
-							},
-							{
-								title: "sys.nav.system.user",
-								path: "/management/system/user",
-							},
-						],
-					},
+					}
 				],
 			},
 			// menulevel
@@ -155,50 +137,11 @@ export const frontendNavData: NavProps["data"] = [
 					},
 				],
 			},
-			// functions
-			{
-				title: "sys.nav.functions",
-				path: "/functions",
-				icon: <Icon icon="solar:plain-2-bold-duotone" size="24" />,
-				children: [
-					{
-						title: "sys.nav.clipboard",
-						path: "/functions/clipboard",
-					},
-					{
-						title: "sys.nav.token_expired",
-						path: "/functions/token_expired",
-					},
-				],
-			},
 		],
 	},
 	{
 		name: "sys.nav.others",
 		items: [
-			{
-				title: "sys.nav.permission",
-				path: "/permission",
-				icon: <Icon icon="mingcute:safe-lock-fill" size="24" />,
-			},
-			{
-				title: "sys.nav.permission.page_test",
-				path: "/permission/page-test",
-				icon: <Icon icon="mingcute:safe-lock-fill" size="24" />,
-				auth: ["permission:read"],
-				hidden: true,
-			},
-			{
-				title: "sys.nav.calendar",
-				path: "/calendar",
-				icon: <Icon icon="solar:calendar-bold-duotone" size="24" />,
-				info: <Badge variant="warning">+12</Badge>,
-			},
-			{
-				title: "sys.nav.kanban",
-				path: "/kanban",
-				icon: <Icon icon="solar:clipboard-bold-duotone" size="24" />,
-			},
 			{
 				title: "sys.nav.disabled",
 				path: "/disabled",

@@ -57,7 +57,7 @@ backend-go/
 
 ```yaml
 server:
-  port: ":8080"
+  port: ":8090"
   
 database:
   host: "localhost"
@@ -91,7 +91,7 @@ go mod tidy
 go run main.go
 ```
 
-服务将在 `http://localhost:8080` 启动。
+服务将在 `http://localhost:8090` 启动。
 
 ## 数据库
 
@@ -108,7 +108,7 @@ go run main.go
 
 ### 用户注册
 ```bash
-curl -X POST http://localhost:8080/api/v1/users/register \
+curl -X POST http://localhost:8090/api/v1/users/register \
   -H "Content-Type: application/json" \
   -d '{
     "username": "testuser",
@@ -119,7 +119,7 @@ curl -X POST http://localhost:8080/api/v1/users/register \
 
 ### 用户登录
 ```bash
-curl -X POST http://localhost:8080/api/v1/users/login \
+curl -X POST http://localhost:8090/api/v1/users/login \
   -H "Content-Type: application/json" \
   -d '{
     "username": "testuser",
@@ -129,7 +129,7 @@ curl -X POST http://localhost:8080/api/v1/users/login \
 
 ### 获取用户资料
 ```bash
-curl -X GET http://localhost:8080/api/v1/users/profile \
+curl -X GET http://localhost:8090/api/v1/users/profile \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 

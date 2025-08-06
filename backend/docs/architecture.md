@@ -423,7 +423,7 @@ func LoadConfig() (*Config, error) {
     
     // 设置默认值
     if cfg.Server.Port == "" {
-        cfg.Server.Port = ":8081"
+        cfg.Server.Port = ":8090"
     }
     
     return &cfg, nil
@@ -1304,7 +1304,7 @@ WORKDIR /root/
 COPY --from=builder /app/alice .
 COPY --from=builder /app/config.yaml .
 
-EXPOSE 8081
+EXPOSE 8090
 CMD ["./alice"]
 ```
 
@@ -1329,7 +1329,7 @@ spec:
       - name: alice
         image: alice:latest
         ports:
-        - containerPort: 8081
+        - containerPort: 8090
         env:
         - name: DB_HOST
           value: "postgresql"
@@ -1348,13 +1348,13 @@ spec:
         livenessProbe:
           httpGet:
             path: /health
-            port: 8081
+            port: 8090
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /ready
-            port: 8081
+            port: 8090
           initialDelaySeconds: 5
           periodSeconds: 5
 ```
