@@ -1,0 +1,7 @@
+{
+    "code": 200,
+    "message": "login successful",
+    "data": {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTUxODA1MTQsImlhdCI6MTc1NTA5NDExNCwidXNlcl9pZCI6MX0.fSGG87ZqRcPeAErJyOMZIyuNs_ZOzCfhsXIh6dV_1d8"
+    }
+}
