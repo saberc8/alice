@@ -1,19 +1,3 @@
-/*
- * Copyright 2025 alice Authors
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package config
 
 import (
@@ -33,7 +17,8 @@ type Config struct {
 
 // ServerConfig 服务器配置
 type ServerConfig struct {
-	Port string `yaml:"port"`
+	Port          string `yaml:"port"`
+	EnableSwagger bool   `yaml:"enable_swagger"`
 }
 
 // DatabaseConfig 数据库配置
@@ -59,19 +44,21 @@ type LogConfig struct {
 
 // Load 加载配置
 func Load() *Config {
-	config := &Config{}
+	cfg := &Config{}
 
 	// 尝试从配置文件加载
 	if data, err := os.ReadFile("config.yaml"); err == nil {
-		if yaml.Unmarshal(data, config) == nil {
-			return config
+		if yaml.Unmarshal(data, cfg) == nil {
+			applyDefaults(cfg)
+			return cfg
 		}
 	}
 
 	// 如果文件不存在或解析失败，使用环境变量和默认值
-	return &Config{
+	cfg = &Config{
 		Server: ServerConfig{
-			Port: getEnv("SERVER_PORT", ":8090"),
+			Port:          getEnv("SERVER_PORT", ":8090"),
+			EnableSwagger: getEnv("ENABLE_SWAGGER", "true") == "true",
 		},
 		Database: DatabaseConfig{
 			Host:     getEnv("DB_HOST", "localhost"),
@@ -88,6 +75,28 @@ func Load() *Config {
 		Log: LogConfig{
 			Level: getEnv("LOG_LEVEL", "info"),
 		},
+	}
+	applyDefaults(cfg)
+	return cfg
+}
+
+// applyDefaults 填充缺失的默认值 (尤其是 YAML 未显式配置的布尔字段)
+func applyDefaults(c *Config) {
+	if c.Server.Port == "" {
+		c.Server.Port = ":8090"
+	}
+	// 若未在 YAML 中声明且未通过 env 设置, 默认开启 swagger
+	if !c.Server.EnableSwagger && getEnv("ENABLE_SWAGGER", "") == "" {
+		c.Server.EnableSwagger = true
+	}
+	if c.JWT.ExpiresIn == 0 {
+		c.JWT.ExpiresIn = 24
+	}
+	if c.JWT.SecretKey == "" {
+		c.JWT.SecretKey = "alice-secret-key"
+	}
+	if c.Log.Level == "" {
+		c.Log.Level = "info"
 	}
 }
 

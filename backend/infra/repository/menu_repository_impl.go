@@ -1,19 +1,3 @@
-/*
- * Copyright 2025 alice Authors
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package repository
 
 import (
@@ -115,13 +99,13 @@ func (r *menuRepositoryImpl) GetByUserID(ctx context.Context, userID string) ([]
 	var menus []*entity.Menu
 
 	err := r.db.WithContext(ctx).
-		Select("DISTINCT menus.*").
 		Table("menus").
 		Joins("INNER JOIN role_menus ON menus.id = role_menus.menu_id").
 		Joins("INNER JOIN user_roles ON role_menus.role_id = user_roles.role_id").
 		Joins("INNER JOIN roles ON user_roles.role_id = roles.id").
 		Where("user_roles.user_id = ? AND menus.status = ? AND roles.status = ?",
 			userID, entity.MenuStatusActive, entity.RoleStatusActive).
+		Group("menus.id, menus.parent_id, menus.name, menus.code, menus.path, menus.type, menus.\"order\", menus.status, menus.description, menus.created_at, menus.updated_at").
 		Order("menus.\"order\" ASC, menus.created_at ASC").
 		Find(&menus).Error
 

@@ -344,7 +344,48 @@ make test-api
 
 API 文档使用 Swagger/OpenAPI 3.0 规范，访问地址：
 - 开发环境: http://localhost:8090/swagger/index.html
-- 生产环境: https://api.alice.com/swagger/index.html
+- 生产环境: (依据部署域名) https://<your-domain>/swagger/index.html
+
+### 生成 / 更新文档
+
+项目使用 [swag](https://github.com/swaggo/swag) 从代码注释生成文档，步骤如下：
+
+```bash
+cd backend
+make swagger  # 等价于: go install github.com/swaggo/swag/cmd/swag@latest && swag init -g main.go -o docs
+```
+
+生成后会在 `backend/docs` 目录出现 `docs.go swagger.json swagger.yaml` 文件。
+
+### 注释示例
+
+如下是 `Register` 接口的注释样例：
+
+```go
+// @Summary 用户注册
+// @Description 注册新用户
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body model.RegisterRequest true "注册请求"
+// @Success 200 {object} model.APIResponse{data=model.RegisterResponse}
+// @Failure 400 {object} model.APIResponse
+// @Router /auth/register [post]
+```
+
+更多注释可参考 `api/handler/user_handler.go`。
+
+### 访问控制
+
+当前示例项目默认所有环境均暴露 `/swagger/*any`。生产环境可在路由中增加开关，例如通过环境变量：
+
+```go
+if cfg.Server.EnableSwagger {
+    router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+}
+```
+
+并在配置中添加 `enableSwagger` 开关。
 
 ### 主要 API 端点
 
@@ -378,6 +419,7 @@ API 文档使用 Swagger/OpenAPI 3.0 规范，访问地址：
 | `DB_PASSWORD` | 数据库密码 | - |
 | `DB_NAME` | 数据库名 | `alice` |
 | `JWT_SECRET` | JWT 密钥 | - |
+| `ENABLE_SWAGGER` | 是否启用 swagger 文档 | `true` |
 
 ### Docker 部署
 ```bash

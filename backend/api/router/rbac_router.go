@@ -1,19 +1,3 @@
-/*
- * Copyright 2025 alice Authors
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package router
 
 import (
@@ -24,13 +8,13 @@ import (
 
 // SetupRBACRoutes 设置RBAC路由
 func SetupRBACRoutes(
-	r *gin.Engine,
+	r *gin.RouterGroup,
 	roleHandler *handler.RoleHandler,
 	permissionHandler *handler.PermissionHandler,
 	menuHandler *handler.MenuHandler,
 ) {
-	// API版本分组
-	v1 := r.Group("/api/v1")
+	// 直接在传入的受保护组下注册 (调用方确保已加需要的中间件)
+	v1 := r // 保持原命名语义
 
 	// 角色管理路由
 	roles := v1.Group("/roles")

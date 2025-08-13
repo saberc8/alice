@@ -11,16 +11,14 @@ import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router";
-import { toast } from "sonner";
 import { LoginStateEnum, useLoginStateContext } from "./providers/login-provider";
 
 export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<"form">) {
-	const [loading, setLoading] = useState(false);
 	const [remember, setRemember] = useState(true);
 	const navigatge = useNavigate();
 
 	const { loginState, setLoginState } = useLoginStateContext();
-	const signIn = useSignIn();
+	const { signIn, isPending } = useSignIn();
 
 	const form = useForm<SignInReq>({
 		defaultValues: {
@@ -32,15 +30,13 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 	if (loginState !== LoginStateEnum.LOGIN) return null;
 
 	const handleFinish = async (values: SignInReq) => {
-		setLoading(true);
 		try {
 			await signIn(values);
 			navigatge(GLOBAL_CONFIG.defaultRoute, { replace: true });
-			toast.success("登录成功", {
-				closeButton: true,
-			});
-		} finally {
-			setLoading(false);
+			// 移除 toast.success，因为 signIn 内部已经处理了
+		} catch (error) {
+			// 错误处理已经在 signIn 内部处理了
+			console.error('Login error:', error);
 		}
 	};
 
@@ -104,8 +100,8 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 					</div>
 
 					{/* 登录按钮 */}
-					<Button type="submit" className="w-full">
-						{loading && <Loader2 className="animate-spin mr-2" />}
+					<Button type="submit" className="w-full" disabled={isPending}>
+						{isPending && <Loader2 className="animate-spin mr-2" />}
 						登录
 					</Button>
 

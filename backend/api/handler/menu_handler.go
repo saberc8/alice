@@ -1,19 +1,3 @@
-/*
- * Copyright 2025 alice Authors
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package handler
 
 import (
@@ -39,6 +23,17 @@ func NewMenuHandler(menuService service.MenuService) *MenuHandler {
 }
 
 // CreateMenu 创建菜单
+// @Summary 创建菜单
+// @Description 创建一个新的菜单
+// @Tags Menus
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body service.CreateMenuRequest true "创建菜单请求"
+// @Success 201 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /menus [post]
 func (h *MenuHandler) CreateMenu(c *gin.Context) {
 	var req service.CreateMenuRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -58,6 +53,16 @@ func (h *MenuHandler) CreateMenu(c *gin.Context) {
 }
 
 // GetMenu 获取菜单
+// @Summary 获取菜单详情
+// @Description 根据ID获取菜单详情
+// @Tags Menus
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "菜单ID"
+// @Success 200 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /menus/{id} [get]
 func (h *MenuHandler) GetMenu(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -76,6 +81,14 @@ func (h *MenuHandler) GetMenu(c *gin.Context) {
 }
 
 // ListMenus 获取菜单列表
+// @Summary 菜单列表
+// @Description 获取所有菜单列表
+// @Tags Menus
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /menus [get]
 func (h *MenuHandler) ListMenus(c *gin.Context) {
 	menus, err := h.menuService.ListMenus(c.Request.Context())
 	if err != nil {
@@ -88,6 +101,14 @@ func (h *MenuHandler) ListMenus(c *gin.Context) {
 }
 
 // GetMenuTree 获取菜单树
+// @Summary 菜单树
+// @Description 获取完整菜单树
+// @Tags Menus
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /menus/tree [get]
 func (h *MenuHandler) GetMenuTree(c *gin.Context) {
 	tree, err := h.menuService.GetMenuTree(c.Request.Context())
 	if err != nil {
@@ -100,6 +121,18 @@ func (h *MenuHandler) GetMenuTree(c *gin.Context) {
 }
 
 // UpdateMenu 更新菜单
+// @Summary 更新菜单
+// @Description 更新指定菜单
+// @Tags Menus
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "菜单ID"
+// @Param request body service.UpdateMenuRequest true "更新菜单请求"
+// @Success 200 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /menus/{id} [put]
 func (h *MenuHandler) UpdateMenu(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -126,6 +159,16 @@ func (h *MenuHandler) UpdateMenu(c *gin.Context) {
 }
 
 // DeleteMenu 删除菜单
+// @Summary 删除菜单
+// @Description 删除指定菜单
+// @Tags Menus
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "菜单ID"
+// @Success 200 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /menus/{id} [delete]
 func (h *MenuHandler) DeleteMenu(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -143,6 +186,18 @@ func (h *MenuHandler) DeleteMenu(c *gin.Context) {
 }
 
 // AssignMenusToRole 为角色分配菜单
+// @Summary 为角色分配菜单
+// @Description 为指定角色批量分配菜单
+// @Tags RoleMenus
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "角色ID"
+// @Param request body model.AssignIDsRequest true "菜单ID集合 (menu_ids)"
+// @Success 200 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /roles/{id}/menus [post]
 func (h *MenuHandler) AssignMenusToRole(c *gin.Context) {
 	roleID := c.Param("id")
 	if roleID == "" {
@@ -170,6 +225,18 @@ func (h *MenuHandler) AssignMenusToRole(c *gin.Context) {
 }
 
 // RemoveMenusFromRole 移除角色菜单
+// @Summary 移除角色菜单
+// @Description 从角色移除一组菜单
+// @Tags RoleMenus
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "角色ID"
+// @Param request body model.AssignIDsRequest true "菜单ID集合 (menu_ids)"
+// @Success 200 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /roles/{id}/menus [delete]
 func (h *MenuHandler) RemoveMenusFromRole(c *gin.Context) {
 	roleID := c.Param("id")
 	if roleID == "" {
@@ -197,6 +264,16 @@ func (h *MenuHandler) RemoveMenusFromRole(c *gin.Context) {
 }
 
 // GetRoleMenus 获取角色菜单
+// @Summary 获取角色菜单
+// @Description 获取指定角色的菜单列表
+// @Tags RoleMenus
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "角色ID"
+// @Success 200 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /roles/{id}/menus [get]
 func (h *MenuHandler) GetRoleMenus(c *gin.Context) {
 	roleID := c.Param("id")
 	if roleID == "" {
@@ -215,6 +292,16 @@ func (h *MenuHandler) GetRoleMenus(c *gin.Context) {
 }
 
 // GetUserMenus 获取用户菜单
+// @Summary 获取用户菜单
+// @Description 获取指定用户的菜单列表
+// @Tags UserMenus
+// @Produce json
+// @Security BearerAuth
+// @Param user_id path string true "用户ID"
+// @Success 200 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /users/{user_id}/menus [get]
 func (h *MenuHandler) GetUserMenus(c *gin.Context) {
 	userID := c.Param("user_id")
 	if userID == "" {
@@ -233,6 +320,16 @@ func (h *MenuHandler) GetUserMenus(c *gin.Context) {
 }
 
 // GetUserMenuTree 获取用户菜单树
+// @Summary 用户菜单树
+// @Description 获取指定用户的菜单树
+// @Tags UserMenus
+// @Produce json
+// @Security BearerAuth
+// @Param user_id path string true "用户ID"
+// @Success 200 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /users/{user_id}/menus/tree [get]
 func (h *MenuHandler) GetUserMenuTree(c *gin.Context) {
 	userID := c.Param("user_id")
 	if userID == "" {

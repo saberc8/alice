@@ -1,26 +1,13 @@
-/*
- * Copyright 2025 alice Authors
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package router
 
 import (
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"alice/api/handler"
 	"alice/api/middleware"
+	"alice/infra/config"
 )
 
 type Router struct {
@@ -52,28 +39,31 @@ func (r *Router) SetupRoutes() *gin.Engine {
 	router.Use(middleware.CORSMiddleware())
 	router.Use(gin.Recovery())
 
-	// API路由组
+	// API路由组 (添加公共与受保护子组)
 	v1 := router.Group("/api/v1")
-	{
-		// 用户相关路由
-		userGroup := v1.Group("/users")
-		{
-			// 公开接口
-			userGroup.POST("/register", r.userHandler.Register)
-			userGroup.POST("/login", r.userHandler.Login)
 
-			// 需要认证的接口
-			authenticated := userGroup.Group("")
-			authenticated.Use(middleware.JWTAuth())
-			{
-				authenticated.GET("/profile", r.userHandler.GetProfile)
-				authenticated.PUT("/profile", r.userHandler.UpdateProfile)
-			}
+	// 用户认证相关 (仅注册/登录无需 token)
+	userAuth := v1.Group("/auth")
+	{
+		userAuth.POST("/register", r.userHandler.Register)
+		userAuth.POST("/login", r.userHandler.Login)
+
+		// 其余用户接口需要认证
+		userProtected := userAuth.Group("")
+		userProtected.Use(middleware.JWTAuth())
+		{
+			userProtected.GET("/profile", r.userHandler.GetProfile)
+			userProtected.PUT("/profile", r.userHandler.UpdateProfile)
 		}
 	}
 
-	// 设置RBAC路由
-	SetupRBACRoutes(router, r.roleHandler, r.permissionHandler, r.menuHandler)
+	// 受保护的业务功能路由 (除上面开放的登录注册外全部要求 token)
+	protected := v1.Group("")
+	protected.Use(middleware.JWTAuth())
+	{
+		// 设置RBAC路由 (已处于受保护组中)
+		SetupRBACRoutes(protected, r.roleHandler, r.permissionHandler, r.menuHandler)
+	}
 
 	// 健康检查
 	router.GET("/health", func(c *gin.Context) {
@@ -81,6 +71,12 @@ func (r *Router) SetupRoutes() *gin.Engine {
 			"status": "ok",
 		})
 	})
+
+	// Swagger 文档路由 (根据配置开关)
+	cfg := config.Load() // 简单方式(注意: 若频繁调用可考虑依赖注入避免重复解析)
+	if cfg.Server.EnableSwagger {
+		router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
 
 	return router
 }

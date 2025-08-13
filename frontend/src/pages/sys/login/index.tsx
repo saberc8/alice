@@ -7,7 +7,6 @@ import { Navigate } from "react-router";
 import LoginForm from "./login-form";
 import MobileForm from "./mobile-form";
 import { LoginProvider } from "./providers/login-provider";
-import QrCodeFrom from "./qrcode-form";
 import RegisterForm from "./register-form";
 import ResetForm from "./reset-form";
 
@@ -32,7 +31,6 @@ function LoginPage() {
 						<LoginProvider>
 							<LoginForm />
 							<MobileForm />
-							<QrCodeFrom />
 							<RegisterForm />
 							<ResetForm />
 						</LoginProvider>

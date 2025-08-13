@@ -25,6 +25,7 @@ type UserStore = {
 		setUserMenuTree: (menuTree: MenuTree[]) => void;
 		clearUserInfoAndToken: () => void;
 		loadUserData: (userId: string) => Promise<void>;
+		refreshMenuTree: (userId: string) => Promise<void>;
 	};
 };
 
@@ -89,6 +90,25 @@ const useUserStore = create<UserStore>()(
 						}
 					} catch (error) {
 						console.error('加载用户数据失败:', error);
+					}
+				},
+				// 专门用于刷新菜单树的方法
+				refreshMenuTree: async (userId: string) => {
+					try {
+						const { setUserMenuTree } = get().actions;
+						console.log('正在刷新菜单树...');
+						
+						// 获取最新的用户菜单树
+						const menuTreeRes = await userService.getUserMenuTree(userId);
+						
+						if (menuTreeRes.code === 200) {
+							setUserMenuTree(menuTreeRes.data || []);
+							console.log('菜单树刷新成功，共', menuTreeRes.data?.length || 0, '个根菜单');
+						} else {
+							console.error('菜单树刷新失败:', menuTreeRes.message);
+						}
+					} catch (error) {
+						console.error('刷新菜单树时发生错误:', error);
 					}
 				},
 			},
@@ -211,6 +231,20 @@ export const useRoleCheck = () => {
 	};
 	
 	return { hasRole, hasAnyRole };
+};
+
+// 菜单刷新 Hook
+export const useMenuRefresh = () => {
+	const userInfo = useUserInfo();
+	const { refreshMenuTree } = useUserActions();
+	
+	const refreshMenu = async () => {
+		if (userInfo.id) {
+			await refreshMenuTree(userInfo.id);
+		}
+	};
+	
+	return { refreshMenu };
 };
 
 export default useUserStore;

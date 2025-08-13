@@ -37,10 +37,21 @@ help:
 	@echo "Available commands:"
 	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' | sed -e 's/^/ /'
 
-## deps: 下载依赖
+## deps: 下载依赖 (包含 swagger 相关模块)
 deps:
 	$(GOMOD) download
 	$(GOMOD) tidy
+
+## swagger-install: 安装 swagger 代码生成工具
+swagger-install:
+	@echo "Installing swag tool..."
+	go install github.com/swaggo/swag/cmd/swag@latest
+
+## swagger: 生成 swagger 文档 (docs/)
+swagger: swagger-install
+	@echo "Generating swagger docs..."
+	swag init -g main.go -o docs
+	@echo "Swagger docs generated in ./docs"
 
 ## fmt: 格式化代码
 fmt:

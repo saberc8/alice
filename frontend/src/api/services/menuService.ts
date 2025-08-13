@@ -1,5 +1,5 @@
 import apiClient from "../apiClient";
-import type { APIResponse, PaginationReq, PaginationData } from "@/types/api";
+import type { APIResponse, PaginationReq } from "@/types/api";
 import type { Menu, MenuTree } from "@/types/entity";
 
 // 菜单创建请求
@@ -41,9 +41,11 @@ const createMenu = (data: CreateMenuReq) =>
     data 
   });
 
-// 获取菜单列表
+// 获取菜单列表（后端当前返回的是完整数组而非分页结构）
+// 为保持前端调用简单，这里直接声明为 Menu[]
+// 如果后端未来改为分页，可再调整为 PaginationData<Menu>
 const getMenus = (params?: MenuListReq) => 
-  apiClient.get<APIResponse<PaginationData<Menu>>>({ 
+  apiClient.get<APIResponse<Menu[]>>({ 
     url: MenuApi.Menus, 
     params 
   });

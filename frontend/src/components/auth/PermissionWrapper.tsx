@@ -55,11 +55,14 @@ export const PermissionWrapper: React.FC<PermissionWrapperProps> = ({
 }) => {
   const { hasPermission, hasPermissionByCode } = usePermissionCheck();
   const { hasRole } = useRoleCheck();
+  const isSuperAdmin = hasRole('super_admin');
 
   let hasAccess = false;
 
   // 检查权限
-  if (resource && action) {
+  if (isSuperAdmin) {
+    hasAccess = true; // 超级管理员直接放行
+  } else if (resource && action) {
     hasAccess = hasPermission(resource, action);
   } else if (permissionCode) {
     hasAccess = hasPermissionByCode(permissionCode);

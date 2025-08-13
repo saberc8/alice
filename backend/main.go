@@ -1,19 +1,3 @@
-/*
- * Copyright 2025 alice Authors
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package main
 
 import (
@@ -30,7 +14,22 @@ import (
 	"alice/application"
 	"alice/infra/config"
 	"alice/pkg/logger"
+
+	_ "alice/docs" // swagger 文档 (由 swag 工具生成)
 )
+
+// @title Alice API
+// @version 1.0
+// @description Alice 企业级后端 API 文档。
+// @BasePath /api/v1
+// @schemes http
+// @contact.name API Support
+// @contact.url https://github.com/coze-dev/alice
+// @contact.email support@example.com
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description 请输入形如: Bearer <token>
 
 func main() {
 	// 初始化配置

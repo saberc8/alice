@@ -5,8 +5,10 @@ import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
 import { Helmet, HelmetProvider } from "react-helmet-async";
 import { MotionLazy } from "./components/animate/motion-lazy";
 import { RouteLoadingProgress } from "./components/loading";
+import { LoadingScreen } from "./components/loading/LoadingScreen";
 import Toast from "./components/toast";
 import { GLOBAL_CONFIG } from "./global-config";
+import { useAppInit } from "./hooks/useAppInit";
 import { AntdAdapter } from "./theme/adapter/antd.adapter";
 import { ThemeProvider } from "./theme/theme-provider";
 
@@ -22,6 +24,25 @@ if (import.meta.env.DEV) {
 }
 
 function App({ children }: { children: React.ReactNode }) {
+	const { isInitialized, isLoading } = useAppInit();
+
+	// 显示加载屏幕直到初始化完成
+	if (isLoading || !isInitialized) {
+		return (
+			<HelmetProvider>
+				<QueryClientProvider client={new QueryClient()}>
+					<ThemeProvider adapters={[AntdAdapter]}>
+						<Helmet>
+							<title>{GLOBAL_CONFIG.appName}</title>
+							<link rel="icon" href={Logo} />
+						</Helmet>
+						<LoadingScreen />
+					</ThemeProvider>
+				</QueryClientProvider>
+			</HelmetProvider>
+		);
+	}
+
 	return (
 		<HelmetProvider>
 			<QueryClientProvider client={new QueryClient()}>

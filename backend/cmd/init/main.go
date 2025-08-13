@@ -1,19 +1,3 @@
-/*
- * Copyright 2025 alice Authors
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package main
 
 import (
@@ -22,12 +6,15 @@ import (
 	"log"
 
 	"alice/domain/rbac/entity"
-	"alice/domain/rbac/service"
+	rbacService "alice/domain/rbac/service"
+	userEntity "alice/domain/user/entity"
+	userServicePkg "alice/domain/user/service"
 	"alice/infra/config"
 	"alice/infra/database"
 	"alice/infra/repository"
 	"alice/pkg/logger"
 
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -48,11 +35,13 @@ func main() {
 	roleRepo := repository.NewRoleRepository(db)
 	permissionRepo := repository.NewPermissionRepository(db)
 	menuRepo := repository.NewMenuRepository(db)
+	userRepo := repository.NewUserRepository(db)
 
 	// 初始化服务
-	roleService := service.NewRoleService(roleRepo)
-	permissionService := service.NewPermissionService(permissionRepo)
-	menuService := service.NewMenuService(menuRepo)
+	roleService := rbacService.NewRoleService(roleRepo)
+	permissionService := rbacService.NewPermissionService(permissionRepo)
+	menuService := rbacService.NewMenuService(menuRepo)
+	userService := userServicePkg.NewUserService(userRepo)
 
 	ctx := context.Background()
 
@@ -70,31 +59,24 @@ func main() {
 		log.Fatal("Failed to init permissions:", err)
 	}
 
-	if err := initMenus(ctx, menuService); err != nil {
+	if err := initMenus(ctx, db, menuService); err != nil {
 		log.Fatal("Failed to init menus:", err)
+	}
+
+	// 创建 admin 超级管理员并分配所有角色/权限/菜单
+	if err := initAdminUser(ctx, db, userService, roleService, permissionService, menuService); err != nil {
+		log.Fatal("Failed to init admin user:", err)
 	}
 
 	fmt.Println("初始化数据完成!")
 }
 
 // initRoles 初始化角色
-func initRoles(ctx context.Context, roleService service.RoleService) error {
-	roles := []service.CreateRoleRequest{
-		{
-			Name:   "超级管理员",
-			Code:   "super_admin",
-			Status: entity.RoleStatusActive,
-		},
-		{
-			Name:   "管理员",
-			Code:   "admin",
-			Status: entity.RoleStatusActive,
-		},
-		{
-			Name:   "普通用户",
-			Code:   "user",
-			Status: entity.RoleStatusActive,
-		},
+func initRoles(ctx context.Context, roleService rbacService.RoleService) error {
+	roles := []rbacService.CreateRoleRequest{
+		{Name: "超级管理员", Code: "super_admin", Status: entity.RoleStatusActive},
+		{Name: "管理员", Code: "admin", Status: entity.RoleStatusActive},
+		{Name: "普通用户", Code: "user", Status: entity.RoleStatusActive},
 	}
 
 	for _, req := range roles {
@@ -109,9 +91,85 @@ func initRoles(ctx context.Context, roleService service.RoleService) error {
 	return nil
 }
 
+// initAdminUser 创建一个 admin 超级管理员账号并授予全部角色/权限/菜单
+func initAdminUser(
+	ctx context.Context,
+	db *gorm.DB,
+	userService userServicePkg.UserService,
+	roleService rbacService.RoleService,
+	permissionService rbacService.PermissionService,
+	menuService rbacService.MenuService,
+) error {
+	const (
+		adminUsername = "admin"
+		adminPassword = "123456"
+		adminEmail    = "admin@example.com"
+	)
+
+	// 如果已存在则跳过
+	var existing userEntity.User
+	if err := db.Where("username = ?", adminUsername).First(&existing).Error; err == nil {
+		fmt.Println("admin 用户已存在，跳过创建")
+		return nil
+	}
+
+	// 手动创建（避免 Register 逻辑修改 email 唯一校验外的流程变化）
+	hash, err := bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("生成密码哈希失败: %w", err)
+	}
+	user := &userEntity.User{Username: adminUsername, Email: adminEmail, PasswordHash: string(hash), Status: userEntity.UserStatusActive}
+	if err := db.Create(user).Error; err != nil {
+		return fmt.Errorf("创建 admin 用户失败: %w", err)
+	}
+	fmt.Println("创建 admin 用户成功, ID=", user.ID)
+
+	// 读取 super_admin 角色 ID
+	superRole, err := repository.NewRoleRepository(db).GetByCode(ctx, "super_admin")
+	if err != nil || superRole == nil {
+		return fmt.Errorf("获取 super_admin 角色失败: %v", err)
+	}
+
+	// 给 admin 分配 super_admin 角色
+	if err := repository.NewRoleRepository(db).AssignToUser(ctx, fmt.Sprintf("%d", user.ID), []string{superRole.ID}); err != nil {
+		return fmt.Errorf("为 admin 分配 super_admin 角色失败: %w", err)
+	}
+	fmt.Println("已为 admin 分配 super_admin 角色")
+
+	// 获取全部权限并分配给 super_admin 角色
+	perms, _, err := repository.NewPermissionRepository(db).List(ctx, 0, 1000)
+	if err != nil {
+		return fmt.Errorf("获取权限列表失败: %w", err)
+	}
+	var permIDs []string
+	for _, p := range perms {
+		permIDs = append(permIDs, p.ID)
+	}
+	if err := repository.NewPermissionRepository(db).AssignToRole(ctx, superRole.ID, permIDs); err != nil {
+		return fmt.Errorf("为 super_admin 分配全部权限失败: %w", err)
+	}
+	fmt.Println("已为 super_admin 角色分配全部权限 (", len(permIDs), ")")
+
+	// 获取全部菜单并分配给 super_admin 角色
+	menus, err := repository.NewMenuRepository(db).List(ctx)
+	if err != nil {
+		return fmt.Errorf("获取菜单列表失败: %w", err)
+	}
+	var menuIDs []string
+	for _, m := range menus {
+		menuIDs = append(menuIDs, m.ID)
+	}
+	if err := repository.NewMenuRepository(db).AssignToRole(ctx, superRole.ID, menuIDs); err != nil {
+		return fmt.Errorf("为 super_admin 分配全部菜单失败: %w", err)
+	}
+	fmt.Println("已为 super_admin 角色分配全部菜单 (", len(menuIDs), ")")
+
+	return nil
+}
+
 // initPermissions 初始化权限
-func initPermissions(ctx context.Context, permissionService service.PermissionService) error {
-	permissions := []service.CreatePermissionRequest{
+func initPermissions(ctx context.Context, permissionService rbacService.PermissionService) error {
+	permissions := []rbacService.CreatePermissionRequest{
 		// 用户管理权限
 		{Name: "查看用户", Code: "user:read", Resource: "user", Action: "read", Status: entity.PermissionStatusActive},
 		{Name: "创建用户", Code: "user:create", Resource: "user", Action: "create", Status: entity.PermissionStatusActive},
@@ -150,11 +208,11 @@ func initPermissions(ctx context.Context, permissionService service.PermissionSe
 }
 
 // initMenus 初始化菜单
-func initMenus(ctx context.Context, menuService service.MenuService) error {
+func initMenus(ctx context.Context, db *gorm.DB, menuService rbacService.MenuService) error {
 	// ========== 创建分组 ==========
 
 	// 1. 仪表板分组
-	dashboardGroup, err := menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	dashboardGroup, err := menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		Name:   "仪表板",
 		Code:   "dashboard",
 		Type:   entity.MenuTypeGroup,
@@ -166,7 +224,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 2. 页面分组
-	pagesGroup, err := menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	pagesGroup, err := menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		Name:   "页面管理",
 		Code:   "pages",
 		Type:   entity.MenuTypeGroup,
@@ -178,7 +236,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 3. UI组件分组
-	uiGroup, err := menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	uiGroup, err := menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		Name:   "UI组件",
 		Code:   "ui",
 		Type:   entity.MenuTypeGroup,
@@ -190,7 +248,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 4. 其他分组
-	othersGroup, err := menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	othersGroup, err := menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		Name:   "其他",
 		Code:   "others",
 		Type:   entity.MenuTypeGroup,
@@ -201,10 +259,17 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 		return fmt.Errorf("创建其他分组失败: %w", err)
 	}
 
+	// 由于 GORM 对零值字段不会生成 INSERT 列，且实体设置了 default:2，会被数据库默认覆盖。
+	// 这里在创建完四个分组后，统一强制更新它们的 type=0。
+	groupIDs := []string{dashboardGroup.ID, pagesGroup.ID, uiGroup.ID, othersGroup.ID}
+	if err := db.Model(&entity.Menu{}).Where("id IN ?", groupIDs).Update("type", entity.MenuTypeGroup).Error; err != nil {
+		return fmt.Errorf("修正分组菜单类型为0失败: %w", err)
+	}
+
 	// ========== 仪表板菜单 ==========
 
 	// 工作台
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &dashboardGroup.ID,
 		Name:     "工作台",
 		Code:     "workbench",
@@ -222,7 +287,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 分析页
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &dashboardGroup.ID,
 		Name:     "分析页",
 		Code:     "analysis",
@@ -242,7 +307,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	// ========== 页面管理 ==========
 
 	// 系统管理目录
-	managementCatalogue, err := menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	managementCatalogue, err := menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &pagesGroup.ID,
 		Name:     "系统管理",
 		Code:     "management",
@@ -259,7 +324,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 用户管理目录
-	userCatalogue, err := menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	userCatalogue, err := menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &managementCatalogue.ID,
 		Name:     "用户管理",
 		Code:     "management:user",
@@ -273,7 +338,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 用户资料
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &userCatalogue.ID,
 		Name:     "用户资料",
 		Code:     "management:user:profile",
@@ -290,7 +355,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 账户管理
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &userCatalogue.ID,
 		Name:     "账户管理",
 		Code:     "management:user:account",
@@ -307,7 +372,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// RBAC管理目录
-	rbacCatalogue, err := menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	rbacCatalogue, err := menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &managementCatalogue.ID,
 		Name:     "权限管理",
 		Code:     "management:rbac",
@@ -321,7 +386,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// RBAC概览
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &rbacCatalogue.ID,
 		Name:     "权限概览",
 		Code:     "management:rbac:overview",
@@ -338,7 +403,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 用户管理
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &rbacCatalogue.ID,
 		Name:     "用户管理",
 		Code:     "management:rbac:users",
@@ -355,7 +420,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 角色管理
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &rbacCatalogue.ID,
 		Name:     "角色管理",
 		Code:     "management:rbac:roles",
@@ -372,7 +437,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 权限管理
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &rbacCatalogue.ID,
 		Name:     "权限管理",
 		Code:     "management:rbac:permissions",
@@ -389,7 +454,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 菜单管理
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &rbacCatalogue.ID,
 		Name:     "菜单管理",
 		Code:     "management:rbac:menus",
@@ -406,7 +471,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// RBAC演示
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &rbacCatalogue.ID,
 		Name:     "权限演示",
 		Code:     "management:rbac:demo",
@@ -423,7 +488,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 多级菜单目录
-	menuLevelCatalogue, err := menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	menuLevelCatalogue, err := menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &pagesGroup.ID,
 		Name:     "多级菜单",
 		Code:     "menu_level",
@@ -440,7 +505,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 菜单1-a
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &menuLevelCatalogue.ID,
 		Name:     "菜单1-a",
 		Code:     "menu_level:1a",
@@ -457,7 +522,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 菜单1-b目录
-	menu1bCatalogue, err := menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	menu1bCatalogue, err := menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &menuLevelCatalogue.ID,
 		Name:     "菜单1-b",
 		Code:     "menu_level:1b",
@@ -471,7 +536,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 菜单2-a
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &menu1bCatalogue.ID,
 		Name:     "菜单2-a",
 		Code:     "menu_level:1b:2a",
@@ -488,7 +553,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 菜单2-b目录
-	menu2bCatalogue, err := menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	menu2bCatalogue, err := menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &menu1bCatalogue.ID,
 		Name:     "菜单2-b",
 		Code:     "menu_level:1b:2b",
@@ -502,7 +567,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 菜单3-a
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &menu2bCatalogue.ID,
 		Name:     "菜单3-a",
 		Code:     "menu_level:1b:2b:3a",
@@ -519,7 +584,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 菜单3-b
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &menu2bCatalogue.ID,
 		Name:     "菜单3-b",
 		Code:     "menu_level:1b:2b:3b",
@@ -536,7 +601,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 错误页面目录
-	errorCatalogue, err := menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	errorCatalogue, err := menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &pagesGroup.ID,
 		Name:     "错误页面",
 		Code:     "error",
@@ -553,7 +618,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 403页面
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &errorCatalogue.ID,
 		Name:     "403无权限",
 		Code:     "error:403",
@@ -570,7 +635,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 404页面
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &errorCatalogue.ID,
 		Name:     "404未找到",
 		Code:     "error:404",
@@ -587,7 +652,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 500页面
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &errorCatalogue.ID,
 		Name:     "500服务器错误",
 		Code:     "error:500",
@@ -606,7 +671,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	// ========== UI组件 ==========
 
 	// 组件目录
-	componentsCatalogue, err := menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	componentsCatalogue, err := menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &uiGroup.ID,
 		Name:     "组件",
 		Code:     "components",
@@ -624,7 +689,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 图标组件
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &componentsCatalogue.ID,
 		Name:     "图标",
 		Code:     "components:icon",
@@ -641,7 +706,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 动画组件
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &componentsCatalogue.ID,
 		Name:     "动画",
 		Code:     "components:animate",
@@ -658,7 +723,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 滚动组件
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &componentsCatalogue.ID,
 		Name:     "滚动",
 		Code:     "components:scroll",
@@ -675,7 +740,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 上传组件
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &componentsCatalogue.ID,
 		Name:     "上传",
 		Code:     "components:upload",
@@ -692,7 +757,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 图表组件
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &componentsCatalogue.ID,
 		Name:     "图表",
 		Code:     "components:chart",
@@ -709,7 +774,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 消息提示组件
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &componentsCatalogue.ID,
 		Name:     "消息提示",
 		Code:     "components:toast",
@@ -728,7 +793,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	// ========== 其他 ==========
 
 	// 禁用菜单（演示用）
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &othersGroup.ID,
 		Name:     "禁用菜单",
 		Code:     "disabled",
@@ -746,7 +811,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 标签菜单（演示用）
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &othersGroup.ID,
 		Name:     "标签菜单",
 		Code:     "label",
@@ -764,7 +829,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 外部链接目录
-	linkCatalogue, err := menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	linkCatalogue, err := menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &othersGroup.ID,
 		Name:     "外部链接",
 		Code:     "link",
@@ -781,7 +846,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 外部链接
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &linkCatalogue.ID,
 		Name:     "外部链接",
 		Code:     "link:external",
@@ -799,7 +864,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 内嵌页面
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &linkCatalogue.ID,
 		Name:     "内嵌页面",
 		Code:     "link:iframe",
@@ -816,7 +881,7 @@ func initMenus(ctx context.Context, menuService service.MenuService) error {
 	}
 
 	// 空白页
-	_, err = menuService.CreateMenu(ctx, &service.CreateMenuRequest{
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
 		ParentID: &othersGroup.ID,
 		Name:     "空白页",
 		Code:     "blank",

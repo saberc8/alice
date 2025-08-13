@@ -1,0 +1,1343 @@
+basePath: /api/v1
+definitions:
+  entity.MenuMeta:
+    properties:
+      auth:
+        type: boolean
+      caption:
+        type: string
+      component:
+        type: string
+      disabled:
+        type: boolean
+      external_link:
+        type: string
+      hidden:
+        type: boolean
+      icon:
+        type: string
+      info:
+        type: string
+    type: object
+  entity.MenuStatus:
+    enum:
+    - active
+    - inactive
+    type: string
+    x-enum-varnames:
+    - MenuStatusActive
+    - MenuStatusInactive
+  entity.MenuType:
+    enum:
+    - 0
+    - 1
+    - 2
+    - 3
+    type: integer
+    x-enum-comments:
+      MenuTypeButton: 按钮
+      MenuTypeCatalogue: 目录
+      MenuTypeGroup: 分组
+      MenuTypeMenu: 菜单
+    x-enum-descriptions:
+    - 分组
+    - 目录
+    - 菜单
+    - 按钮
+    x-enum-varnames:
+    - MenuTypeGroup
+    - MenuTypeCatalogue
+    - MenuTypeMenu
+    - MenuTypeButton
+  entity.PermissionStatus:
+    enum:
+    - active
+    - inactive
+    type: string
+    x-enum-varnames:
+    - PermissionStatusActive
+    - PermissionStatusInactive
+  entity.RoleStatus:
+    enum:
+    - active
+    - inactive
+    type: string
+    x-enum-varnames:
+    - RoleStatusActive
+    - RoleStatusInactive
+  model.APIResponse:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+    type: object
+  model.AssignIDsRequest:
+    properties:
+      menu_ids:
+        example:
+        - "1"
+        - "2"
+        items:
+          type: string
+        type: array
+      permission_ids:
+        example:
+        - "1"
+        - "2"
+        items:
+          type: string
+        type: array
+      role_ids:
+        example:
+        - "1"
+        - "2"
+        items:
+          type: string
+        type: array
+    type: object
+  model.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  model.LoginResponse:
+    properties:
+      token:
+        type: string
+    type: object
+  model.RegisterRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 6
+        type: string
+      username:
+        maxLength: 20
+        minLength: 3
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  model.RegisterResponse:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/model.UserInfo'
+    type: object
+  model.UpdateProfileRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  model.UserInfo:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      username:
+        type: string
+    type: object
+  service.CreateMenuRequest:
+    properties:
+      code:
+        maxLength: 100
+        type: string
+      description:
+        maxLength: 500
+        type: string
+      meta:
+        $ref: '#/definitions/entity.MenuMeta'
+      name:
+        maxLength: 100
+        type: string
+      order:
+        type: integer
+      parent_id:
+        type: string
+      path:
+        maxLength: 200
+        type: string
+      status:
+        $ref: '#/definitions/entity.MenuStatus'
+      type:
+        $ref: '#/definitions/entity.MenuType'
+    required:
+    - code
+    - name
+    - type
+    type: object
+  service.CreatePermissionRequest:
+    properties:
+      action:
+        maxLength: 50
+        type: string
+      code:
+        maxLength: 100
+        type: string
+      description:
+        maxLength: 500
+        type: string
+      name:
+        maxLength: 100
+        type: string
+      resource:
+        maxLength: 100
+        type: string
+      status:
+        $ref: '#/definitions/entity.PermissionStatus'
+    required:
+    - action
+    - code
+    - name
+    - resource
+    type: object
+  service.CreateRoleRequest:
+    properties:
+      code:
+        maxLength: 100
+        type: string
+      description:
+        maxLength: 500
+        type: string
+      name:
+        maxLength: 100
+        type: string
+      status:
+        $ref: '#/definitions/entity.RoleStatus'
+    required:
+    - code
+    - name
+    type: object
+  service.UpdateMenuRequest:
+    properties:
+      code:
+        maxLength: 100
+        type: string
+      description:
+        maxLength: 500
+        type: string
+      id:
+        type: string
+      meta:
+        $ref: '#/definitions/entity.MenuMeta'
+      name:
+        maxLength: 100
+        type: string
+      order:
+        type: integer
+      parent_id:
+        type: string
+      path:
+        maxLength: 200
+        type: string
+      status:
+        $ref: '#/definitions/entity.MenuStatus'
+      type:
+        $ref: '#/definitions/entity.MenuType'
+    required:
+    - code
+    - id
+    - name
+    - type
+    type: object
+  service.UpdatePermissionRequest:
+    properties:
+      action:
+        maxLength: 50
+        type: string
+      code:
+        maxLength: 100
+        type: string
+      description:
+        maxLength: 500
+        type: string
+      id:
+        type: string
+      name:
+        maxLength: 100
+        type: string
+      resource:
+        maxLength: 100
+        type: string
+      status:
+        $ref: '#/definitions/entity.PermissionStatus'
+    required:
+    - action
+    - code
+    - id
+    - name
+    - resource
+    type: object
+  service.UpdateRoleRequest:
+    properties:
+      code:
+        maxLength: 100
+        type: string
+      description:
+        maxLength: 500
+        type: string
+      id:
+        type: string
+      name:
+        maxLength: 100
+        type: string
+      status:
+        $ref: '#/definitions/entity.RoleStatus'
+    required:
+    - code
+    - id
+    - name
+    type: object
+info:
+  contact:
+    email: support@example.com
+    name: API Support
+    url: https://github.com/coze-dev/alice
+  description: Alice 企业级后端 API 文档。
+  title: Alice API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: 用户登录获取 JWT
+      parameters:
+      - description: 登录请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.LoginResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      summary: 用户登录
+      tags:
+      - Auth
+  /auth/profile:
+    get:
+      description: 获取当前登录用户资料
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UserInfo'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 获取用户资料
+      tags:
+      - User
+    put:
+      consumes:
+      - application/json
+      description: 更新当前登录用户资料
+      parameters:
+      - description: 更新资料请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UserInfo'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 更新用户资料
+      tags:
+      - User
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: 注册新用户
+      parameters:
+      - description: 注册请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.RegisterResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      summary: 用户注册
+      tags:
+      - Auth
+  /menus:
+    get:
+      description: 获取所有菜单列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 菜单列表
+      tags:
+      - Menus
+    post:
+      consumes:
+      - application/json
+      description: 创建一个新的菜单
+      parameters:
+      - description: 创建菜单请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.CreateMenuRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 创建菜单
+      tags:
+      - Menus
+  /menus/{id}:
+    delete:
+      description: 删除指定菜单
+      parameters:
+      - description: 菜单ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 删除菜单
+      tags:
+      - Menus
+    get:
+      description: 根据ID获取菜单详情
+      parameters:
+      - description: 菜单ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 获取菜单详情
+      tags:
+      - Menus
+    put:
+      consumes:
+      - application/json
+      description: 更新指定菜单
+      parameters:
+      - description: 菜单ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 更新菜单请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.UpdateMenuRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 更新菜单
+      tags:
+      - Menus
+  /menus/tree:
+    get:
+      description: 获取完整菜单树
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 菜单树
+      tags:
+      - Menus
+  /permissions:
+    get:
+      description: 分页获取权限列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 权限列表
+      tags:
+      - Permissions
+    post:
+      consumes:
+      - application/json
+      description: 创建一个新的权限
+      parameters:
+      - description: 创建权限请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.CreatePermissionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 创建权限
+      tags:
+      - Permissions
+  /permissions/{id}:
+    delete:
+      description: 删除指定权限
+      parameters:
+      - description: 权限ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 删除权限
+      tags:
+      - Permissions
+    get:
+      description: 根据ID获取权限详情
+      parameters:
+      - description: 权限ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 获取权限详情
+      tags:
+      - Permissions
+    put:
+      consumes:
+      - application/json
+      description: 更新指定权限
+      parameters:
+      - description: 权限ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 更新权限请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.UpdatePermissionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 更新权限
+      tags:
+      - Permissions
+  /roles:
+    get:
+      description: 分页获取角色列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 角色列表
+      tags:
+      - Roles
+    post:
+      consumes:
+      - application/json
+      description: 创建一个新的角色
+      parameters:
+      - description: 创建角色请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.CreateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 创建角色
+      tags:
+      - Roles
+  /roles/{id}:
+    delete:
+      description: 删除指定角色
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 删除角色
+      tags:
+      - Roles
+    get:
+      description: 根据ID获取角色详情
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 获取角色详情
+      tags:
+      - Roles
+    put:
+      consumes:
+      - application/json
+      description: 更新指定角色
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 更新角色请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/service.UpdateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 更新角色
+      tags:
+      - Roles
+  /roles/{id}/menus:
+    delete:
+      consumes:
+      - application/json
+      description: 从角色移除一组菜单
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 菜单ID集合 (menu_ids)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.AssignIDsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 移除角色菜单
+      tags:
+      - RoleMenus
+    get:
+      description: 获取指定角色的菜单列表
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 获取角色菜单
+      tags:
+      - RoleMenus
+    post:
+      consumes:
+      - application/json
+      description: 为指定角色批量分配菜单
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 菜单ID集合 (menu_ids)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.AssignIDsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 为角色分配菜单
+      tags:
+      - RoleMenus
+  /roles/{id}/permissions:
+    delete:
+      consumes:
+      - application/json
+      description: 从角色移除一组权限
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 权限ID集合 (permission_ids)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.AssignIDsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 移除角色权限
+      tags:
+      - RolePermissions
+    get:
+      description: 获取指定角色的权限列表
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 获取角色权限
+      tags:
+      - RolePermissions
+    post:
+      consumes:
+      - application/json
+      description: 为指定角色批量分配权限
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 权限ID集合 (permission_ids)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.AssignIDsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 为角色分配权限
+      tags:
+      - RolePermissions
+  /users/{user_id}/menus:
+    get:
+      description: 获取指定用户的菜单列表
+      parameters:
+      - description: 用户ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 获取用户菜单
+      tags:
+      - UserMenus
+  /users/{user_id}/menus/tree:
+    get:
+      description: 获取指定用户的菜单树
+      parameters:
+      - description: 用户ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 用户菜单树
+      tags:
+      - UserMenus
+  /users/{user_id}/permissions:
+    get:
+      description: 获取指定用户的权限列表
+      parameters:
+      - description: 用户ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 获取用户权限
+      tags:
+      - UserPermissions
+  /users/{user_id}/permissions/check:
+    get:
+      description: 检查用户是否拥有某资源操作权限
+      parameters:
+      - description: 用户ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: 资源标识
+        in: query
+        name: resource
+        required: true
+        type: string
+      - description: 操作标识
+        in: query
+        name: action
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 检查用户权限
+      tags:
+      - UserPermissions
+  /users/{user_id}/roles:
+    delete:
+      consumes:
+      - application/json
+      description: 从用户移除一组角色
+      parameters:
+      - description: 用户ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: 角色ID集合 (role_ids)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.AssignIDsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 移除用户角色
+      tags:
+      - UserRoles
+    get:
+      description: 获取指定用户的角色列表
+      parameters:
+      - description: 用户ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 获取用户角色
+      tags:
+      - UserRoles
+    post:
+      consumes:
+      - application/json
+      description: 为指定用户批量分配角色
+      parameters:
+      - description: 用户ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: 角色ID集合 (role_ids)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.AssignIDsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 为用户分配角色
+      tags:
+      - UserRoles
+schemes:
+- http
+securityDefinitions:
+  BearerAuth:
+    description: '请输入形如: Bearer <token>'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -1,8 +1,11 @@
 import { Icon } from "@/components/icon";
 import { useSettings } from "@/store/settingStore";
+import { useMenuRefresh } from "@/store/userStore";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils";
 import type { ReactNode } from "react";
+import { useState } from "react";
+import { toast } from "sonner";
 import AccountDropdown from "../components/account-dropdown";
 import BreadCrumb from "../components/bread-crumb";
 import NoticeButton from "../components/notice";
@@ -15,6 +18,22 @@ interface HeaderProps {
 
 export default function Header({ leftSlot }: HeaderProps) {
 	const { breadCrumb } = useSettings();
+	const { refreshMenu } = useMenuRefresh();
+	const [isRefreshing, setIsRefreshing] = useState(false);
+
+	const handleRefreshMenu = async () => {
+		setIsRefreshing(true);
+		try {
+			await refreshMenu();
+			toast.success('菜单已刷新', { position: "top-center" });
+			console.log('菜单刷新完成');
+		} catch (error) {
+			toast.error('菜单刷新失败', { position: "top-center" });
+			console.error('菜单刷新失败:', error);
+		} finally {
+			setIsRefreshing(false);
+		}
+	};
 	return (
 		<header
 			data-slot="slash-layout-header"
@@ -33,6 +52,19 @@ export default function Header({ leftSlot }: HeaderProps) {
 
 			<div className="flex items-center gap-1">
 				<SearchBar />
+				<Button
+					variant="ghost"
+					size="icon"
+					className="rounded-full"
+					onClick={handleRefreshMenu}
+					disabled={isRefreshing}
+					title="刷新菜单"
+				>
+					<Icon 
+						icon={isRefreshing ? "line-md:loading-twotone-loop" : "material-symbols:refresh"} 
+						size={18} 
+					/>
+				</Button>
 				<Button
 					variant="ghost"
 					size="icon"

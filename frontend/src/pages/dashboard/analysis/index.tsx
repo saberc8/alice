@@ -542,3 +542,6 @@ export default function Analysis() {
 		</div>
 	);
 }
+
+// Export as Component for lazy loading
+export const Component = Analysis;

@@ -1,19 +1,3 @@
-/*
- * Copyright 2025 alice Authors
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package handler
 
 import (
@@ -40,6 +24,17 @@ func NewRoleHandler(roleService service.RoleService) *RoleHandler {
 }
 
 // CreateRole 创建角色
+// @Summary 创建角色
+// @Description 创建一个新的角色
+// @Tags Roles
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body service.CreateRoleRequest true "创建角色请求"
+// @Success 201 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /roles [post]
 func (h *RoleHandler) CreateRole(c *gin.Context) {
 	var req service.CreateRoleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -59,6 +54,16 @@ func (h *RoleHandler) CreateRole(c *gin.Context) {
 }
 
 // GetRole 获取角色
+// @Summary 获取角色详情
+// @Description 根据ID获取角色详情
+// @Tags Roles
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "角色ID"
+// @Success 200 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /roles/{id} [get]
 func (h *RoleHandler) GetRole(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -77,6 +82,16 @@ func (h *RoleHandler) GetRole(c *gin.Context) {
 }
 
 // ListRoles 获取角色列表
+// @Summary 角色列表
+// @Description 分页获取角色列表
+// @Tags Roles
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "页码"
+// @Param page_size query int false "每页数量"
+// @Success 200 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /roles [get]
 func (h *RoleHandler) ListRoles(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
@@ -104,6 +119,18 @@ func (h *RoleHandler) ListRoles(c *gin.Context) {
 }
 
 // UpdateRole 更新角色
+// @Summary 更新角色
+// @Description 更新指定角色
+// @Tags Roles
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "角色ID"
+// @Param request body service.UpdateRoleRequest true "更新角色请求"
+// @Success 200 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /roles/{id} [put]
 func (h *RoleHandler) UpdateRole(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -130,6 +157,16 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 }
 
 // DeleteRole 删除角色
+// @Summary 删除角色
+// @Description 删除指定角色
+// @Tags Roles
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "角色ID"
+// @Success 200 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /roles/{id} [delete]
 func (h *RoleHandler) DeleteRole(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -147,6 +184,18 @@ func (h *RoleHandler) DeleteRole(c *gin.Context) {
 }
 
 // AssignRolesToUser 为用户分配角色
+// @Summary 为用户分配角色
+// @Description 为指定用户批量分配角色
+// @Tags UserRoles
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param user_id path string true "用户ID"
+// @Param request body model.AssignIDsRequest true "角色ID集合 (role_ids)"
+// @Success 200 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /users/{user_id}/roles [post]
 func (h *RoleHandler) AssignRolesToUser(c *gin.Context) {
 	userID := c.Param("user_id")
 	if userID == "" {
@@ -174,6 +223,18 @@ func (h *RoleHandler) AssignRolesToUser(c *gin.Context) {
 }
 
 // RemoveRolesFromUser 移除用户角色
+// @Summary 移除用户角色
+// @Description 从用户移除一组角色
+// @Tags UserRoles
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param user_id path string true "用户ID"
+// @Param request body model.AssignIDsRequest true "角色ID集合 (role_ids)"
+// @Success 200 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /users/{user_id}/roles [delete]
 func (h *RoleHandler) RemoveRolesFromUser(c *gin.Context) {
 	userID := c.Param("user_id")
 	if userID == "" {
@@ -201,6 +262,16 @@ func (h *RoleHandler) RemoveRolesFromUser(c *gin.Context) {
 }
 
 // GetUserRoles 获取用户角色
+// @Summary 获取用户角色
+// @Description 获取指定用户的角色列表
+// @Tags UserRoles
+// @Produce json
+// @Security BearerAuth
+// @Param user_id path string true "用户ID"
+// @Success 200 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /users/{user_id}/roles [get]
 func (h *RoleHandler) GetUserRoles(c *gin.Context) {
 	userID := c.Param("user_id")
 	if userID == "" {

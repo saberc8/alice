@@ -1,19 +1,3 @@
-/*
- * Copyright 2025 alice Authors
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package handler
 
 import (
@@ -37,6 +21,15 @@ func NewUserHandler(userService service.UserService) *UserHandler {
 }
 
 // Register 用户注册
+// @Summary 用户注册
+// @Description 注册新用户
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body model.RegisterRequest true "注册请求"
+// @Success 200 {object} model.APIResponse{data=model.RegisterResponse}
+// @Failure 400 {object} model.APIResponse
+// @Router /auth/register [post]
 func (h *UserHandler) Register(c *gin.Context) {
 	var req model.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -74,6 +67,16 @@ func (h *UserHandler) Register(c *gin.Context) {
 }
 
 // Login 用户登录
+// @Summary 用户登录
+// @Description 用户登录获取 JWT
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body model.LoginRequest true "登录请求"
+// @Success 200 {object} model.APIResponse{data=model.LoginResponse}
+// @Failure 400 {object} model.APIResponse
+// @Failure 401 {object} model.APIResponse
+// @Router /auth/login [post]
 func (h *UserHandler) Login(c *gin.Context) {
 	var req model.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -98,6 +101,14 @@ func (h *UserHandler) Login(c *gin.Context) {
 }
 
 // GetProfile 获取用户资料
+// @Summary 获取用户资料
+// @Description 获取当前登录用户资料
+// @Tags User
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} model.APIResponse{data=model.UserInfo}
+// @Failure 401 {object} model.APIResponse
+// @Router /auth/profile [get]
 func (h *UserHandler) GetProfile(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -130,6 +141,17 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 }
 
 // UpdateProfile 更新用户资料
+// @Summary 更新用户资料
+// @Description 更新当前登录用户资料
+// @Tags User
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param request body model.UpdateProfileRequest true "更新资料请求"
+// @Success 200 {object} model.APIResponse{data=model.UserInfo}
+// @Failure 400 {object} model.APIResponse
+// @Failure 401 {object} model.APIResponse
+// @Router /auth/profile [put]
 func (h *UserHandler) UpdateProfile(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {

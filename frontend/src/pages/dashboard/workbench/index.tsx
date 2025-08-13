@@ -344,3 +344,6 @@ export default function Workbench() {
 		</div>
 	);
 }
+
+// Export as Component for lazy loading
+export const Component = Workbench;
