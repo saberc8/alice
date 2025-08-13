@@ -17,7 +17,7 @@ alice/
 │   ├── main.go      # 主程序入口
 │   ├── go.mod       # Go 模块文件
 │   └── ...
-├── frontend/         # React 前端应用
+├── admin/         #  前端管理后台应用
 │   ├── package.json # 前端依赖配置
 │   ├── src/         # 源代码目录
 │   └── ...
