@@ -140,6 +140,15 @@ definitions:
       user:
         $ref: '#/definitions/model.UserInfo'
     type: object
+  model.RoleBrief:
+    properties:
+      code:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
   model.UpdateProfileRequest:
     properties:
       email:
@@ -153,6 +162,10 @@ definitions:
         type: string
       id:
         type: integer
+      roles:
+        items:
+          $ref: '#/definitions/model.RoleBrief'
+        type: array
       username:
         type: string
     type: object

@@ -2,21 +2,25 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 
 	"alice/api/model"
+	rbacsvc "alice/domain/rbac/service"
 	"alice/domain/user/service"
 	"alice/pkg/logger"
 )
 
 type UserHandler struct {
 	userService service.UserService
+	roleService rbacsvc.RoleService
 }
 
-func NewUserHandler(userService service.UserService) *UserHandler {
+func NewUserHandler(userService service.UserService, roleService rbacsvc.RoleService) *UserHandler {
 	return &UserHandler{
 		userService: userService,
+		roleService: roleService,
 	}
 }
 
@@ -132,10 +136,26 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 		return
 	}
 
+	// 查询用户角色（若可用）
+	var roles []model.RoleBrief
+	if h.roleService != nil {
+		// 注意：RoleService 使用的是 string 类型的用户ID，这里统一为字符串
+		userIDStr := strconv.FormatUint(uint64(uid), 10)
+		if rlist, rerr := h.roleService.GetUserRoles(c.Request.Context(), userIDStr); rerr == nil {
+			roles = make([]model.RoleBrief, 0, len(rlist))
+			for _, r := range rlist {
+				roles = append(roles, model.RoleBrief{ID: r.ID, Name: r.Name, Code: r.Code})
+			}
+		} else {
+			logger.Errorf("Get user roles failed: %v", rerr)
+		}
+	}
+
 	response := model.SuccessResponse(model.UserInfo{
 		ID:       user.ID,
 		Username: user.Username,
 		Email:    user.Email,
+		Roles:    roles,
 	})
 	c.JSON(http.StatusOK, response)
 }

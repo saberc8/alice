@@ -1,119 +1,153 @@
 {
-    "code": 200,
-    "message": "success",
-    "data": [
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "id": "3c12c347-5474-4d8e-bfff-90a9c15d472f",
+      "parent_id": null,
+      "name": "仪表板",
+      "code": "dashboard",
+      "path": null,
+      "type": 0,
+      "order": 1,
+      "status": "active",
+      "meta": {},
+      "description": null,
+      "created_at": "2025-08-14T09:30:09.919936+08:00",
+      "updated_at": "2025-08-14T09:30:09.920964+08:00",
+      "children": [
         {
-            "id": "3c4cd10c-a784-4db2-93aa-3fbad9dcfcb6",
-            "parent_id": null,
-            "name": "仪表板",
-            "code": "dashboard",
-            "path": null,
-            "type": 0,
-            "order": 1,
-            "status": "active",
-            "meta": {},
-            "description": null,
-            "created_at": "2025-08-13T22:12:20.901903+08:00",
-            "updated_at": "2025-08-13T22:12:20.90356+08:00",
-            "children": [
-                {
-                    "id": "7bd84366-4163-421c-a424-21e57d0ba19c",
-                    "parent_id": "3c4cd10c-a784-4db2-93aa-3fbad9dcfcb6",
-                    "name": "工作台",
-                    "code": "workbench",
-                    "path": "/workbench",
-                    "type": 2,
-                    "order": 1,
-                    "status": "active",
-                    "meta": {
-                        "icon": "local:ic-workbench",
-                        "component": "/pages/dashboard/workbench"
-                    },
-                    "description": null,
-                    "created_at": "2025-08-13T22:12:20.904651+08:00",
-                    "updated_at": "2025-08-13T22:12:20.904651+08:00"
-                }
+          "id": "5c7f5c2e-d408-44d2-ad4d-3a3862c43ae4",
+          "parent_id": "3c12c347-5474-4d8e-bfff-90a9c15d472f",
+          "name": "工作台",
+          "code": "workbench",
+          "path": "/workbench",
+          "type": 2,
+          "order": 1,
+          "status": "active",
+          "meta": {
+            "icon": "local:ic-workbench",
+            "component": "/pages/dashboard/workbench"
+          },
+          "description": null,
+          "created_at": "2025-08-14T09:30:09.921866+08:00",
+          "updated_at": "2025-08-14T09:30:09.921866+08:00"
+        }
+      ]
+    },
+    {
+      "id": "fd99e462-fa11-4026-8e3f-b25e3b3218c3",
+      "parent_id": null,
+      "name": "系统设置",
+      "code": "system",
+      "path": null,
+      "type": 0,
+      "order": 2,
+      "status": "active",
+      "meta": {},
+      "description": null,
+      "created_at": "2025-08-14T09:30:09.920617+08:00",
+      "updated_at": "2025-08-14T09:30:09.920964+08:00",
+      "children": [
+        {
+          "id": "173d3f82-8982-4805-a683-d3990b564361",
+          "parent_id": "fd99e462-fa11-4026-8e3f-b25e3b3218c3",
+          "name": "菜单管理",
+          "code": "system:menus",
+          "path": "/system/menus",
+          "type": 2,
+          "order": 1,
+          "status": "active",
+          "meta": {
+            "component": "/pages/management/rbac/MenuManagement",
+            "perms": [
+              "system:menu:delete",
+              "system:menu:get",
+              "system:menu:create",
+              "system:menu:list",
+              "system:menu:update"
             ]
+          },
+          "description": null,
+          "created_at": "2025-08-14T09:30:09.922558+08:00",
+          "updated_at": "2025-08-14T09:30:09.922558+08:00"
         },
         {
-            "id": "4909d5d7-c60d-4c2b-a36d-7ecaccf9ecd5",
-            "parent_id": null,
-            "name": "系统设置",
-            "code": "system",
-            "path": null,
-            "type": 0,
-            "order": 2,
-            "status": "active",
-            "meta": {},
-            "description": null,
-            "created_at": "2025-08-13T22:12:20.903082+08:00",
-            "updated_at": "2025-08-13T22:12:20.90356+08:00",
-            "children": [
-                {
-                    "id": "2362804e-1266-46e4-b790-babcc7c74913",
-                    "parent_id": "4909d5d7-c60d-4c2b-a36d-7ecaccf9ecd5",
-                    "name": "菜单管理",
-                    "code": "system:menus",
-                    "path": "/system/menus",
-                    "type": 2,
-                    "order": 1,
-                    "status": "active",
-                    "meta": {
-                        "component": "/pages/management/rbac/MenuManagement"
-                    },
-                    "description": null,
-                    "created_at": "2025-08-13T22:12:20.905281+08:00",
-                    "updated_at": "2025-08-13T22:12:20.905281+08:00"
-                },
-                {
-                    "id": "cb2c7fa4-afc1-4497-a756-5de524e873a9",
-                    "parent_id": "4909d5d7-c60d-4c2b-a36d-7ecaccf9ecd5",
-                    "name": "角色管理",
-                    "code": "system:roles",
-                    "path": "/system/roles",
-                    "type": 2,
-                    "order": 2,
-                    "status": "active",
-                    "meta": {
-                        "component": "/pages/management/rbac/RoleManagement"
-                    },
-                    "description": null,
-                    "created_at": "2025-08-13T22:12:20.905853+08:00",
-                    "updated_at": "2025-08-13T22:12:20.905853+08:00"
-                },
-                {
-                    "id": "2c06e0a0-1818-4d26-87e3-145725dfc21f",
-                    "parent_id": "4909d5d7-c60d-4c2b-a36d-7ecaccf9ecd5",
-                    "name": "用户管理",
-                    "code": "system:users",
-                    "path": "/system/users",
-                    "type": 2,
-                    "order": 3,
-                    "status": "active",
-                    "meta": {
-                        "component": "/pages/management/rbac/UserManagement"
-                    },
-                    "description": null,
-                    "created_at": "2025-08-13T22:12:20.906405+08:00",
-                    "updated_at": "2025-08-13T22:12:20.906405+08:00"
-                },
-                {
-                    "id": "7d1e9867-2e70-4f26-974f-61327aa32c1b",
-                    "parent_id": "4909d5d7-c60d-4c2b-a36d-7ecaccf9ecd5",
-                    "name": "权限管理",
-                    "code": "system:permissions",
-                    "path": "/system/permissions",
-                    "type": 2,
-                    "order": 4,
-                    "status": "active",
-                    "meta": {
-                        "component": "/pages/management/rbac/PermissionManagement"
-                    },
-                    "description": null,
-                    "created_at": "2025-08-13T22:12:20.907105+08:00",
-                    "updated_at": "2025-08-13T22:12:20.907105+08:00"
-                }
+          "id": "7767f780-df4f-408e-9c40-6813dc2cf5da",
+          "parent_id": "fd99e462-fa11-4026-8e3f-b25e3b3218c3",
+          "name": "角色管理",
+          "code": "system:roles",
+          "path": "/system/roles",
+          "type": 2,
+          "order": 2,
+          "status": "active",
+          "meta": {
+            "component": "/pages/management/rbac/RoleManagement",
+            "perms": [
+              "system:role:update",
+              "system:role:create",
+              "system:role:permissions:get",
+              "system:role:menus:remove",
+              "system:role:get",
+              "system:role:list",
+              "system:role:delete",
+              "system:role:menus:list",
+              "system:role:menus:assign",
+              "system:role:permissions:assign",
+              "system:role:permissions:remove"
             ]
+          },
+          "description": null,
+          "created_at": "2025-08-14T09:30:09.923422+08:00",
+          "updated_at": "2025-08-14T09:30:09.923422+08:00"
+        },
+        {
+          "id": "6be8df39-eb35-4311-911e-9c499ab59563",
+          "parent_id": "fd99e462-fa11-4026-8e3f-b25e3b3218c3",
+          "name": "用户管理",
+          "code": "system:users",
+          "path": "/system/users",
+          "type": 2,
+          "order": 3,
+          "status": "active",
+          "meta": {
+            "component": "/pages/management/rbac/UserManagement",
+            "perms": [
+              "system:user:roles:get",
+              "system:user:permissions:get",
+              "system:user:permissions:check",
+              "system:user:roles:remove",
+              "system:user:roles:assign"
+            ]
+          },
+          "description": null,
+          "created_at": "2025-08-14T09:30:09.92452+08:00",
+          "updated_at": "2025-08-14T09:30:09.92452+08:00"
+        },
+        {
+          "id": "6a235dda-26dd-41c9-b13c-fc9735caed04",
+          "parent_id": "fd99e462-fa11-4026-8e3f-b25e3b3218c3",
+          "name": "权限管理",
+          "code": "system:permissions",
+          "path": "/system/permissions",
+          "type": 2,
+          "order": 4,
+          "status": "active",
+          "meta": {
+            "component": "/pages/management/rbac/PermissionManagement",
+            "perms": [
+              "system:permission:get",
+              "system:permission:list",
+              "system:permission:create",
+              "system:permission:delete",
+              "system:permission:update"
+            ]
+          },
+          "description": null,
+          "created_at": "2025-08-14T09:30:09.925144+08:00",
+          "updated_at": "2025-08-14T09:30:09.925144+08:00"
         }
-    ]
+      ]
+    }
+  ]
 }

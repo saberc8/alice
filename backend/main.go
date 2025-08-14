@@ -45,7 +45,7 @@ func main() {
 	}
 
 	// 初始化处理器
-	userHandler := handler.NewUserHandler(application.UserSvc)
+	userHandler := handler.NewUserHandler(application.UserSvc, application.RoleSvc)
 	roleHandler := handler.NewRoleHandler(application.RoleSvc)
 	permissionHandler := handler.NewPermissionHandler(application.PermissionSvc)
 	menuHandler := handler.NewMenuHandler(application.MenuSvc)

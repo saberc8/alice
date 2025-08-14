@@ -20,9 +20,17 @@ type RegisterResponse struct {
 
 // UserInfo 用户信息
 type UserInfo struct {
-	ID       uint   `json:"id"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
+	ID       uint        `json:"id"`
+	Username string      `json:"username"`
+	Email    string      `json:"email"`
+	Roles    []RoleBrief `json:"roles,omitempty"`
+}
+
+// RoleBrief 精简角色信息（用于 Profile 下发）
+type RoleBrief struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Code string `json:"code"`
 }
 
 // 响应状态码常量

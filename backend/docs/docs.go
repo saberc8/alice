@@ -1889,6 +1889,20 @@ const docTemplate = `{
                 }
             }
         },
+        "model.RoleBrief": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "model.UpdateProfileRequest": {
             "type": "object",
             "required": [
@@ -1908,6 +1922,12 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "integer"
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.RoleBrief"
+                    }
                 },
                 "username": {
                     "type": "string"
