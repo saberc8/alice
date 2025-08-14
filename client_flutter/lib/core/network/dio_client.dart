@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:client_flutter/core/auth/token_store.dart';
 // no flutter foundation needed after unifying base URL
 
 class DioClient {
@@ -23,6 +24,15 @@ class DioClient {
       ),
     )
     ..interceptors.addAll([
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          final token = TokenStore.instance.token;
+          if (token != null && token.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          handler.next(options);
+        },
+      ),
       LogInterceptor(requestBody: false, responseBody: true),
     ]);
 }

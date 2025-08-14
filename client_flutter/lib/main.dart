@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:client_flutter/theme/app_theme.dart';
-import 'package:client_flutter/core/network/health_service.dart';
+// removed health check
 import 'package:client_flutter/features/auth/login_page.dart';
 import 'package:client_flutter/features/home/home_tabs.dart';
+import 'package:client_flutter/core/auth/token_store.dart';
 
 void main() {
   runApp(const MyApp());
@@ -16,9 +17,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  bool _loggedIn = false; // fake auth state
-  bool _checkedHealth = false;
-  bool _healthOk = false;
+  bool _loggedIn = false; // based on token presence
 
   @override
   void initState() {
@@ -27,12 +26,9 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _init() async {
-    // ping backend /health to verify network is ok
-    final ok = await HealthService().ping();
-    setState(() {
-      _healthOk = ok;
-      _checkedHealth = true;
-    });
+    await TokenStore.instance.init();
+    if (!mounted) return;
+    setState(() => _loggedIn = TokenStore.instance.token != null);
   }
 
   void _onLogin() {
@@ -45,42 +41,15 @@ class _MyAppState extends State<MyApp> {
       title: 'Alice Client',
       theme: AppTheme.light(),
       home:
-          !_checkedHealth
-              ? const _Splash()
-              : !_healthOk
-              ? _HealthError(onRetry: _init)
-              : !_loggedIn
+          !_loggedIn
               ? LoginPage(onLogin: _onLogin)
-              : const HomeTabs(),
-    );
-  }
-}
-
-class _Splash extends StatelessWidget {
-  const _Splash();
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
-  }
-}
-
-class _HealthError extends StatelessWidget {
-  const _HealthError({required this.onRetry});
-  final Future<void> Function() onRetry;
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('服务不可用')),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('无法连接到后端服务 (/health 失败)'),
-            const SizedBox(height: 12),
-            FilledButton(onPressed: onRetry, child: const Text('重试')),
-          ],
-        ),
-      ),
+              : HomeTabs(
+                onLogout: () async {
+                  await TokenStore.instance.clear();
+                  if (!mounted) return;
+                  setState(() => _loggedIn = false);
+                },
+              ),
     );
   }
 }

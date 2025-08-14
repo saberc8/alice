@@ -3,6 +3,8 @@ package application
 import (
 	"context"
 
+	appfriendservice "alice/domain/appfriend/service"
+	appuserservice "alice/domain/appuser/service"
 	rbacService "alice/domain/rbac/service"
 	"alice/domain/user/service"
 	"alice/infra/config"
@@ -14,6 +16,10 @@ import (
 var (
 	// UserSvc 用户服务实例
 	UserSvc service.UserService
+
+	// App 端服务实例
+	AppUserSvc appuserservice.AppUserService
+	FriendSvc  appfriendservice.FriendService
 
 	// RBAC 服务实例
 	RoleSvc       rbacService.RoleService
@@ -29,16 +35,20 @@ func Init(ctx context.Context, cfg *config.Config) error {
 		return err
 	}
 
-	// 初始化用户仓储
+	// 初始化仓储
 	userRepo := repository.NewUserRepository(db)
+	appUserRepo := repository.NewAppUserRepository(db)
+	friendRepo := repository.NewFriendRepository(db)
 
 	// 初始化RBAC仓储
 	roleRepo := repository.NewRoleRepository(db)
 	permissionRepo := repository.NewPermissionRepository(db)
 	menuRepo := repository.NewMenuRepository(db)
 
-	// 初始化用户服务
+	// 初始化服务
 	UserSvc = service.NewUserService(userRepo)
+	AppUserSvc = appuserservice.NewAppUserService(appUserRepo)
+	FriendSvc = appfriendservice.NewFriendService(appUserRepo, friendRepo)
 
 	// 初始化RBAC服务
 	RoleSvc = rbacService.NewRoleService(roleRepo)

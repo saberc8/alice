@@ -6,6 +6,8 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
+	friendEntity "alice/domain/appfriend/entity"
+	appEntity "alice/domain/appuser/entity"
 	rbacEntity "alice/domain/rbac/entity"
 	"alice/domain/user/entity"
 	"alice/infra/config"
@@ -36,6 +38,11 @@ func autoMigrate(db *gorm.DB) error {
 	return db.AutoMigrate(
 		// 用户表
 		&entity.User{},
+
+		// App 端表
+		&appEntity.AppUser{},
+		&friendEntity.FriendRelation{},
+		&friendEntity.FriendRequest{},
 
 		// RBAC表
 		&rbacEntity.Role{},

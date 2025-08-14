@@ -13,6 +13,7 @@ import (
 
 type Router struct {
 	userHandler       *handler.UserHandler
+	appUserHandler    *handler.AppUserHandler
 	roleHandler       *handler.RoleHandler
 	permissionHandler *handler.PermissionHandler
 	menuHandler       *handler.MenuHandler
@@ -20,12 +21,14 @@ type Router struct {
 
 func NewRouter(
 	userHandler *handler.UserHandler,
+	appUserHandler *handler.AppUserHandler,
 	roleHandler *handler.RoleHandler,
 	permissionHandler *handler.PermissionHandler,
 	menuHandler *handler.MenuHandler,
 ) *Router {
 	return &Router{
 		userHandler:       userHandler,
+		appUserHandler:    appUserHandler,
 		roleHandler:       roleHandler,
 		permissionHandler: permissionHandler,
 		menuHandler:       menuHandler,
@@ -73,6 +76,26 @@ func (r *Router) SetupRoutes() *gin.Engine {
 			users.GET("/:user_id", middleware.RequirePerm(application.PermissionSvc, "system:user:get"), r.userHandler.GetUser)
 			users.PUT("/:user_id", middleware.RequirePerm(application.PermissionSvc, "system:user:update"), r.userHandler.UpdateUser)
 			users.DELETE("/:user_id", middleware.RequirePerm(application.PermissionSvc, "system:user:delete"), r.userHandler.DeleteUser)
+		}
+
+	}
+
+	// ===== 移动端 App 路由（独立于后台鉴权） =====
+	app := v1.Group("/app")
+	{
+		app.POST("/register", r.appUserHandler.AppRegister)
+		app.POST("/login", r.appUserHandler.AppLogin)
+
+		appProtected := app.Group("")
+		appProtected.Use(middleware.AppJWTAuth())
+		{
+			appProtected.GET("/profile", r.appUserHandler.AppProfile)
+			appProtected.PUT("/profile", r.appUserHandler.AppUpdateProfile)
+			appProtected.POST("/friends/request", r.appUserHandler.RequestFriend)
+			appProtected.GET("/friends", r.appUserHandler.ListFriends)
+			appProtected.GET("/friends/requests", r.appUserHandler.ListPendingRequests)
+			appProtected.POST("/friends/requests/:request_id/accept", r.appUserHandler.AcceptFriendRequest)
+			appProtected.POST("/friends/requests/:request_id/decline", r.appUserHandler.DeclineFriendRequest)
 		}
 	}
 
