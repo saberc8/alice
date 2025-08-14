@@ -100,16 +100,19 @@ router.beforeEach(async (to, _from, next) => {
 		return next({ path: '/login', query: { redirect: to.fullPath } })
 	}
 
-	// if logged in and not yet initialized, fetch profile and menus
-	if (auth.token && !auth.initialized) {
+	// if logged in, ensure profile exists; then fetch menus by userId every refresh
+	if (auth.token) {
 		try {
-			await auth.fetchProfile()
-			await menu.fetchMenusForUser(auth.profile?.id)
-			// register dynamic routes once
-			if (!menu.routesRegistered) {
-				const dynamicChildren = buildRoutesFromMenuTree(menu.tree)
-				dynamicChildren.forEach((r) => router.addRoute('Root', r))
-				menu.routesRegistered = true
+			if (!auth.profile) await auth.fetchProfile()
+			const userId = auth.profile?.id
+			if (userId && !menu.loaded) {
+				await menu.fetchMenusForUser(userId)
+				// register dynamic routes (idempotent)
+				if (!menu.routesRegistered) {
+					const dynamicChildren = buildRoutesFromMenuTree(menu.tree)
+					dynamicChildren.forEach((r) => router.addRoute('Root', r))
+					menu.routesRegistered = true
+				}
 			}
 		} catch (e) {
 			// token invalid -> logout

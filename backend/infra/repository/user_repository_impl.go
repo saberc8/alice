@@ -63,3 +63,16 @@ func (r *userRepositoryImpl) Update(user *entity.User) error {
 func (r *userRepositoryImpl) Delete(id uint) error {
 	return r.db.Delete(&entity.User{}, id).Error
 }
+
+// List 分页获取用户列表
+func (r *userRepositoryImpl) List(offset, limit int) ([]*entity.User, int64, error) {
+	var users []*entity.User
+	var total int64
+
+	if err := r.db.Model(&entity.User{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	err := r.db.Offset(offset).Limit(limit).Order("created_at DESC").Find(&users).Error
+	return users, total, err
+}

@@ -273,7 +273,7 @@ func initMenus(ctx context.Context, db *gorm.DB, menuService rbacService.MenuSer
 		Status:   entity.MenuStatusActive,
 		Meta: entity.MenuMeta{
 			Icon:      stringPtr("local:ic-workbench"),
-			Component: stringPtr("/pages/dashboard/workbench"),
+			Component: stringPtr("views/dashboard/workbench"),
 		},
 	})
 	if err != nil {
@@ -290,7 +290,7 @@ func initMenus(ctx context.Context, db *gorm.DB, menuService rbacService.MenuSer
 		Type:     entity.MenuTypeMenu,
 		Order:    1,
 		Status:   entity.MenuStatusActive,
-		Meta:     entity.MenuMeta{Component: stringPtr("/pages/management/rbac/MenuManagement")},
+		Meta:     entity.MenuMeta{Component: stringPtr("views/management/rbac/MenuManagement")},
 	})
 	if err != nil {
 		return fmt.Errorf("创建菜单管理失败: %w", err)
@@ -305,7 +305,7 @@ func initMenus(ctx context.Context, db *gorm.DB, menuService rbacService.MenuSer
 		Type:     entity.MenuTypeMenu,
 		Order:    2,
 		Status:   entity.MenuStatusActive,
-		Meta:     entity.MenuMeta{Component: stringPtr("/pages/management/rbac/RoleManagement")},
+		Meta:     entity.MenuMeta{Component: stringPtr("views/management/rbac/RoleManagement")},
 	})
 	if err != nil {
 		return fmt.Errorf("创建角色管理失败: %w", err)
@@ -320,7 +320,7 @@ func initMenus(ctx context.Context, db *gorm.DB, menuService rbacService.MenuSer
 		Type:     entity.MenuTypeMenu,
 		Order:    3,
 		Status:   entity.MenuStatusActive,
-		Meta:     entity.MenuMeta{Component: stringPtr("/pages/management/rbac/UserManagement")},
+		Meta:     entity.MenuMeta{Component: stringPtr("views/management/rbac/UserManagement")},
 	})
 	if err != nil {
 		return fmt.Errorf("创建用户管理失败: %w", err)
@@ -335,7 +335,7 @@ func initMenus(ctx context.Context, db *gorm.DB, menuService rbacService.MenuSer
 		Type:     entity.MenuTypeMenu,
 		Order:    4,
 		Status:   entity.MenuStatusActive,
-		Meta:     entity.MenuMeta{Component: stringPtr("/pages/management/rbac/PermissionManagement")},
+		Meta:     entity.MenuMeta{Component: stringPtr("views/management/rbac/PermissionManagement")},
 	})
 	if err != nil {
 		return fmt.Errorf("创建权限管理失败: %w", err)

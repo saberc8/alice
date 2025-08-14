@@ -133,7 +133,7 @@ func (r *menuRepositoryImpl) GetByRoleID(ctx context.Context, roleID string) ([]
 		Table("menus").
 		Joins("INNER JOIN role_menus ON menus.id = role_menus.menu_id").
 		Where("role_menus.role_id = ? AND menus.status = ?", roleID, entity.MenuStatusActive).
-		Order("menus.`order` ASC, menus.created_at ASC").
+		Order("menus.\"order\" ASC, menus.created_at ASC").
 		Find(&menus).Error
 
 	return menus, err
@@ -181,7 +181,7 @@ func (r *menuRepositoryImpl) GetChildren(ctx context.Context, parentID string) (
 
 	err := r.db.WithContext(ctx).
 		Where("parent_id = ? AND status = ?", parentID, entity.MenuStatusActive).
-		Order("`order` ASC, created_at ASC").
+		Order("\"order\" ASC, created_at ASC").
 		Find(&menus).Error
 
 	return menus, err

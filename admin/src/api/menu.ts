@@ -20,3 +20,7 @@ export function getUserMenusTree(userId: number | string) {
 export function getRoleMenusTree(roleId: string) {
   return http.get<MenuItem[]>(`/roles/${roleId}/menus/tree`)
 }
+
+export function getRoleMenus(roleId: string) {
+  return http.get<MenuItem[]>(`/roles/${roleId}/menus`)
+}

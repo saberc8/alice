@@ -26,6 +26,22 @@ type UserInfo struct {
 	Roles    []RoleBrief `json:"roles,omitempty"`
 }
 
+// UserItem 管理列表用的用户条目
+type UserItem struct {
+	ID       uint   `json:"id"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Status   string `json:"status"`
+}
+
+// UserListResponse 列表响应
+type UserListResponse struct {
+	Items    []UserItem `json:"items"`
+	Total    int64      `json:"total"`
+	Page     int        `json:"page"`
+	PageSize int        `json:"page_size"`
+}
+
 // RoleBrief 精简角色信息（用于 Profile 下发）
 type RoleBrief struct {
 	ID   string `json:"id"`

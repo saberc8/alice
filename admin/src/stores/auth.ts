@@ -22,7 +22,7 @@ export const useAuthStore = defineStore('auth', {
 		async fetchProfile() {
 			const p = await getProfile()
 			this.profile = p
-			this.initialized = true
+		this.initialized = true
 			return p
 		},
 		async logout() {

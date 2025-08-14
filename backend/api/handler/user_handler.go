@@ -8,6 +8,7 @@ import (
 
 	"alice/api/model"
 	rbacsvc "alice/domain/rbac/service"
+	userentity "alice/domain/user/entity"
 	"alice/domain/user/service"
 	"alice/pkg/logger"
 )
@@ -209,4 +210,145 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 		Email:    user.Email,
 	})
 	c.JSON(http.StatusOK, response)
+}
+
+// ========== Admin: 用户管理 CRUD ==========
+
+// CreateUser 管理员创建用户
+// @Summary 管理员创建用户
+// @Tags Users
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param request body model.AdminCreateUserRequest true "创建用户"
+// @Success 200 {object} model.APIResponse{data=model.UserInfo}
+// @Router /users [post]
+func (h *UserHandler) CreateUser(c *gin.Context) {
+	var req model.AdminCreateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(model.CodeBadRequest, model.MsgInvalidRequest))
+		return
+	}
+	status := userentity.UserStatusActive
+	if req.Status != "" {
+		status = userentity.UserStatus(req.Status)
+	}
+	user, err := h.userService.CreateUserByAdmin(req.Username, req.Password, req.Email, status)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(model.CodeBadRequest, err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, model.SuccessResponse(model.UserInfo{ID: user.ID, Username: user.Username, Email: user.Email}))
+}
+
+// GetUser 获取用户详情
+// @Summary 获取用户详情
+// @Tags Users
+// @Security BearerAuth
+// @Produce json
+// @Param user_id path int true "用户ID"
+// @Success 200 {object} model.APIResponse{data=model.UserInfo}
+// @Router /users/{user_id} [get]
+func (h *UserHandler) GetUser(c *gin.Context) {
+	idStr := c.Param("user_id")
+	id64, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(model.CodeBadRequest, model.MsgInvalidRequest))
+		return
+	}
+	user, err := h.userService.GetUser(uint(id64))
+	if err != nil || user == nil {
+		c.JSON(http.StatusNotFound, model.ErrorResponse(model.CodeNotFound, model.MsgUserNotFound))
+		return
+	}
+	c.JSON(http.StatusOK, model.SuccessResponse(model.UserInfo{ID: user.ID, Username: user.Username, Email: user.Email}))
+}
+
+// ListUsers 用户列表
+// @Summary 用户列表
+// @Tags Users
+// @Security BearerAuth
+// @Produce json
+// @Param page query int false "页码"
+// @Param page_size query int false "每页条数"
+// @Success 200 {object} model.APIResponse{data=model.UserListResponse}
+// @Router /users [get]
+func (h *UserHandler) ListUsers(c *gin.Context) {
+	var q model.ListUsersQuery
+	if err := c.ShouldBindQuery(&q); err != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(model.CodeBadRequest, model.MsgInvalidRequest))
+		return
+	}
+	if q.Page == 0 {
+		q.Page = 1
+	}
+	if q.PageSize == 0 {
+		q.PageSize = 10
+	}
+	users, total, err := h.userService.ListUsers(q.Page, q.PageSize)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, model.ErrorResponse(model.CodeInternalError, model.MsgInternalError))
+		return
+	}
+	items := make([]model.UserItem, 0, len(users))
+	for _, u := range users {
+		items = append(items, model.UserItem{ID: u.ID, Username: u.Username, Email: u.Email, Status: string(u.Status)})
+	}
+	c.JSON(http.StatusOK, model.SuccessResponse(model.UserListResponse{Items: items, Total: total, Page: q.Page, PageSize: q.PageSize}))
+}
+
+// UpdateUser 更新用户
+// @Summary 更新用户
+// @Tags Users
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param user_id path int true "用户ID"
+// @Param request body model.AdminUpdateUserRequest true "更新用户"
+// @Success 200 {object} model.APIResponse{data=model.UserInfo}
+// @Router /users/{user_id} [put]
+func (h *UserHandler) UpdateUser(c *gin.Context) {
+	idStr := c.Param("user_id")
+	id64, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(model.CodeBadRequest, model.MsgInvalidRequest))
+		return
+	}
+	var req model.AdminUpdateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(model.CodeBadRequest, model.MsgInvalidRequest))
+		return
+	}
+	var status userentity.UserStatus
+	if req.Status != "" {
+		status = userentity.UserStatus(req.Status)
+	}
+	user, err := h.userService.UpdateUserByAdmin(uint(id64), req.Email, status, req.Password)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(model.CodeBadRequest, err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, model.SuccessResponse(model.UserInfo{ID: user.ID, Username: user.Username, Email: user.Email}))
+}
+
+// DeleteUser 删除用户
+// @Summary 删除用户
+// @Tags Users
+// @Security BearerAuth
+// @Produce json
+// @Param user_id path int true "用户ID"
+// @Success 200 {object} model.APIResponse
+// @Router /users/{user_id} [delete]
+func (h *UserHandler) DeleteUser(c *gin.Context) {
+	idStr := c.Param("user_id")
+	id64, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(model.CodeBadRequest, model.MsgInvalidRequest))
+		return
+	}
+	if err := h.userService.DeleteUser(uint(id64)); err != nil {
+		c.JSON(http.StatusInternalServerError, model.ErrorResponse(model.CodeInternalError, model.MsgInternalError))
+		return
+	}
+	c.JSON(http.StatusOK, model.SuccessResponseWithMessage("deleted", nil))
 }

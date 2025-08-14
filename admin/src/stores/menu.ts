@@ -10,13 +10,13 @@ interface State {
 export const useMenuStore = defineStore('menu', {
 	state: (): State => ({ tree: [], loaded: false, routesRegistered: false }),
 	actions: {
-		async fetchMenusForUser(userId?: number) {
-			if (!userId) return []
-			const data = await getUserMenusTree(userId)
-			this.tree = data || []
-			this.loaded = true
-			return this.tree
-		},
+			async fetchMenusForUser(userId?: number | string) {
+				if (!userId) return []
+				const data = await getUserMenusTree(userId)
+				this.tree = (data as any) || []
+				this.loaded = true
+				return this.tree
+			},
 		reset() {
 			this.tree = []
 			this.loaded = false
@@ -24,3 +24,5 @@ export const useMenuStore = defineStore('menu', {
 		},
 	},
 })
+
+

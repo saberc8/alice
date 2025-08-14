@@ -7,6 +7,7 @@ import (
 
 	"alice/api/handler"
 	"alice/api/middleware"
+	"alice/application"
 	"alice/infra/config"
 )
 
@@ -63,6 +64,16 @@ func (r *Router) SetupRoutes() *gin.Engine {
 	{
 		// 设置RBAC路由 (已处于受保护组中)
 		SetupRBACRoutes(protected, r.roleHandler, r.permissionHandler, r.menuHandler)
+
+		// 用户管理 CRUD
+		users := protected.Group("/users")
+		{
+			users.POST("", middleware.RequirePerm(application.PermissionSvc, "system:user:create"), r.userHandler.CreateUser)
+			users.GET("", middleware.RequirePerm(application.PermissionSvc, "system:user:list"), r.userHandler.ListUsers)
+			users.GET("/:user_id", middleware.RequirePerm(application.PermissionSvc, "system:user:get"), r.userHandler.GetUser)
+			users.PUT("/:user_id", middleware.RequirePerm(application.PermissionSvc, "system:user:update"), r.userHandler.UpdateUser)
+			users.DELETE("/:user_id", middleware.RequirePerm(application.PermissionSvc, "system:user:delete"), r.userHandler.DeleteUser)
+		}
 	}
 
 	// 健康检查

@@ -33,6 +33,21 @@ type UserService interface {
 
 	// UpdateProfile 更新用户资料
 	UpdateProfile(userID uint, email string) (*entity.User, error)
+
+	// CreateUserByAdmin 管理员创建用户
+	CreateUserByAdmin(username, password, email string, status entity.UserStatus) (*entity.User, error)
+
+	// GetUser 管理员根据ID获取用户
+	GetUser(userID uint) (*entity.User, error)
+
+	// ListUsers 分页列出用户
+	ListUsers(page, pageSize int) ([]*entity.User, int64, error)
+
+	// UpdateUserByAdmin 管理员更新用户基本信息
+	UpdateUserByAdmin(userID uint, email string, status entity.UserStatus, password *string) (*entity.User, error)
+
+	// DeleteUser 管理员删除用户
+	DeleteUser(userID uint) error
 }
 
 // userServiceImpl 用户服务实现
@@ -164,4 +179,78 @@ func (s *userServiceImpl) generateToken(userID uint) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(cfg.JWT.SecretKey))
+}
+
+// CreateUserByAdmin 管理员创建用户
+func (s *userServiceImpl) CreateUserByAdmin(username, password, email string, status entity.UserStatus) (*entity.User, error) {
+	// 唯一性校验
+	if u, _ := s.userRepo.GetByUsername(username); u != nil {
+		return nil, ErrUserAlreadyExists
+	}
+	if u, _ := s.userRepo.GetByEmail(email); u != nil {
+		return nil, ErrUserAlreadyExists
+	}
+	// 密码处理
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+	user := &entity.User{Username: username, Email: email, PasswordHash: string(hash), Status: status}
+	if err := s.userRepo.Create(user); err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+// GetUser 管理员根据ID获取用户
+func (s *userServiceImpl) GetUser(userID uint) (*entity.User, error) {
+	return s.GetUserByID(userID)
+}
+
+// ListUsers 分页列出用户
+func (s *userServiceImpl) ListUsers(page, pageSize int) ([]*entity.User, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize <= 0 || pageSize > 100 {
+		pageSize = 10
+	}
+	offset := (page - 1) * pageSize
+	return s.userRepo.List(offset, pageSize)
+}
+
+// UpdateUserByAdmin 管理员更新用户
+func (s *userServiceImpl) UpdateUserByAdmin(userID uint, email string, status entity.UserStatus, password *string) (*entity.User, error) {
+	user, err := s.userRepo.GetByID(userID)
+	if err != nil || user == nil {
+		return nil, ErrUserNotFound
+	}
+	// 邮箱唯一性
+	if email != "" && email != user.Email {
+		if exist, _ := s.userRepo.GetByEmail(email); exist != nil && exist.ID != userID {
+			return nil, ErrUserAlreadyExists
+		}
+		user.Email = email
+	}
+	// 状态更新
+	if status != "" {
+		user.Status = status
+	}
+	// 修改密码
+	if password != nil {
+		hash, err := bcrypt.GenerateFromPassword([]byte(*password), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, err
+		}
+		user.PasswordHash = string(hash)
+	}
+	if err := s.userRepo.Update(user); err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+// DeleteUser 管理员删除用户
+func (s *userServiceImpl) DeleteUser(userID uint) error {
+	return s.userRepo.Delete(userID)
 }

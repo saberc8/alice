@@ -23,4 +23,7 @@ type UserRepository interface {
 
 	// Delete 删除用户
 	Delete(id uint) error
+
+	// List 分页获取用户列表，返回列表与总数
+	List(offset, limit int) ([]*entity.User, int64, error)
 }
