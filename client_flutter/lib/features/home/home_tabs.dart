@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:client_flutter/core/app/profile_service.dart';
 import 'package:client_flutter/core/app/friends_service.dart';
+import 'package:client_flutter/features/contacts/friend_profile_page.dart';
 
 class HomeTabs extends StatefulWidget {
   const HomeTabs({super.key, required this.onLogout});
@@ -198,6 +199,13 @@ class _ContactsPageState extends State<_ContactsPage> {
                                     : (u['email'] ?? '-'),
                               ),
                               subtitle: Text(u['email'] ?? ''),
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => FriendProfilePage(user: u),
+                                  ),
+                                );
+                              },
                             );
                           },
                         ),

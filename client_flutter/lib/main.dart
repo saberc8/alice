@@ -4,6 +4,8 @@ import 'package:client_flutter/theme/app_theme.dart';
 import 'package:client_flutter/features/auth/login_page.dart';
 import 'package:client_flutter/features/home/home_tabs.dart';
 import 'package:client_flutter/core/auth/token_store.dart';
+import 'package:client_flutter/features/chat/chat_page.dart';
+import 'package:client_flutter/features/contacts/friend_profile_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -40,6 +42,23 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       title: 'Alice Client',
       theme: AppTheme.light(),
+      onGenerateRoute: (settings) {
+        if (settings.name == '/friend_profile') {
+          final user = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            builder: (_) => FriendProfilePage(user: user),
+            settings: settings,
+          );
+        }
+        if (settings.name == '/chat') {
+          final user = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            builder: (_) => ChatPage(peer: user),
+            settings: settings,
+          );
+        }
+        return null;
+      },
       home:
           !_loggedIn
               ? LoginPage(onLogin: _onLogin)

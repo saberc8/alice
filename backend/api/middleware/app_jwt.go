@@ -42,3 +42,16 @@ func ValidateAppToken(tokenString string) (jwt.MapClaims, error) {
 	cfg := config.Load()
 	return validateToken(tokenString, cfg.JWT.SecretKey)
 }
+
+// GetAppUserID 读取 app_user_id（供 handler 使用）
+func GetAppUserID(c *gin.Context) (uint, error) {
+	if v, ok := c.Get("app_user_id"); ok {
+		if id, ok := v.(uint); ok {
+			return id, nil
+		}
+		if f, ok := v.(float64); ok {
+			return uint(f), nil
+		}
+	}
+	return 0, ErrTokenInvalid
+}

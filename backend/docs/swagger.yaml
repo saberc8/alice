@@ -78,6 +78,104 @@ definitions:
       message:
         type: string
     type: object
+  model.AddFriendRequest:
+    properties:
+      friend_email:
+        type: string
+    required:
+    - friend_email
+    type: object
+  model.AdminCreateUserRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 6
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        - banned
+        type: string
+      username:
+        maxLength: 20
+        minLength: 3
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  model.AdminUpdateUserRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 6
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
+        - banned
+        type: string
+    type: object
+  model.AppAuthResponse:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/model.AppUserInfo'
+    type: object
+  model.AppLoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  model.AppRegisterRequest:
+    properties:
+      email:
+        type: string
+      nickname:
+        maxLength: 30
+        type: string
+      password:
+        minLength: 6
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  model.AppUpdateProfileRequest:
+    properties:
+      avatar:
+        type: string
+      bio:
+        maxLength: 160
+        type: string
+      nickname:
+        maxLength: 30
+        type: string
+    type: object
+  model.AppUserInfo:
+    properties:
+      avatar:
+        type: string
+      bio:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      nickname:
+        type: string
+    type: object
   model.AssignIDsRequest:
     properties:
       menu_ids:
@@ -101,6 +199,32 @@ definitions:
         items:
           type: string
         type: array
+    type: object
+  model.FriendDetail:
+    properties:
+      avatar:
+        type: string
+      bio:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      nickname:
+        type: string
+    type: object
+  model.FriendDetailListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/model.FriendDetail'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
     type: object
   model.LoginRequest:
     properties:
@@ -168,6 +292,30 @@ definitions:
         type: array
       username:
         type: string
+    type: object
+  model.UserItem:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      status:
+        type: string
+      username:
+        type: string
+    type: object
+  model.UserListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/model.UserItem'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
     type: object
   service.CreateMenuRequest:
     properties:
@@ -333,6 +481,277 @@ info:
   title: Alice API
   version: "1.0"
 paths:
+  /app/friends:
+    get:
+      parameters:
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.FriendDetailListResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: App 好友列表（含详细资料）
+      tags:
+      - App
+  /app/friends/request:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 添加好友
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.AddFriendRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: App 发送好友请求
+      tags:
+      - App
+  /app/friends/requests:
+    get:
+      parameters:
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  type: object
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: App 待处理好友请求
+      tags:
+      - App
+  /app/friends/requests/{request_id}/accept:
+    post:
+      parameters:
+      - description: 请求ID
+        in: path
+        name: request_id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: App 接受好友请求
+      tags:
+      - App
+  /app/friends/requests/{request_id}/decline:
+    post:
+      parameters:
+      - description: 请求ID
+        in: path
+        name: request_id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: App 拒绝好友请求
+      tags:
+      - App
+  /app/login:
+    post:
+      consumes:
+      - application/json
+      description: 使用邮箱+密码登录，返回 JWT
+      parameters:
+      - description: 登录请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.AppLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.LoginResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      summary: App 登录
+      tags:
+      - App
+  /app/profile:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.AppUserInfo'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: App 当前用户资料
+      tags:
+      - App
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 更新资料
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.AppUpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.AppUserInfo'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: App 更新资料
+      tags:
+      - App
+  /app/register:
+    post:
+      consumes:
+      - application/json
+      description: 使用邮箱注册，无需邮箱验证
+      parameters:
+      - description: 注册请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.AppRegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.AppAuthResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      summary: App 注册
+      tags:
+      - App
   /auth/login:
     post:
       consumes:
@@ -1156,6 +1575,137 @@ paths:
       summary: 为角色分配权限
       tags:
       - RolePermissions
+  /users:
+    get:
+      parameters:
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UserListResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 用户列表
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 创建用户
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.AdminCreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UserInfo'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 管理员创建用户
+      tags:
+      - Users
+  /users/{user_id}:
+    delete:
+      parameters:
+      - description: 用户ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 删除用户
+      tags:
+      - Users
+    get:
+      parameters:
+      - description: 用户ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UserInfo'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 获取用户详情
+      tags:
+      - Users
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 用户ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      - description: 更新用户
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.AdminUpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UserInfo'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 更新用户
+      tags:
+      - Users
   /users/{user_id}/menus:
     get:
       description: 获取指定用户的菜单列表

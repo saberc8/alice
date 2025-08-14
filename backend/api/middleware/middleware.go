@@ -57,7 +57,14 @@ func extractToken(c *gin.Context) string {
 	}
 
 	// 从查询参数中获取
-	return c.Query("token")
+	if t := c.Query("token"); t != "" {
+		return t
+	}
+	// 兼容常见参数名
+	if t := c.Query("access_token"); t != "" {
+		return t
+	}
+	return ""
 }
 
 // validateToken 验证token

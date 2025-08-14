@@ -12,7 +12,7 @@ class DioClient {
     if (env.isNotEmpty) return env; // allow --dart-define override
 
     // Unified default API base URL for all platforms
-    return 'http://172.20.121.96:8090';
+    return 'http://localhost:8090';
   }
 
   late final Dio dio = Dio(

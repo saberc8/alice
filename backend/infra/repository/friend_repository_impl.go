@@ -71,6 +71,20 @@ func (r *friendRepositoryImpl) DeclineRequest(requestID uint) error {
 	return r.db.Model(&friendentity.FriendRequest{}).Where("id = ?", requestID).Update("status", friendentity.FriendRequestDeclined).Error
 }
 
+// AreFriends 检查是否互为好友（需要同时存在 A->B 与 B->A 记录）
+func (r *friendRepositoryImpl) AreFriends(a, b uint) (bool, error) {
+	if a == 0 || b == 0 || a == b {
+		return false, nil
+	}
+	var cnt int64
+	if err := r.db.Model(&friendentity.FriendRelation{}).
+		Where("(user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)", a, b, b, a).
+		Count(&cnt).Error; err != nil {
+		return false, err
+	}
+	return cnt >= 2, nil
+}
+
 func (r *friendRepositoryImpl) GetPendingRequests(addresseeID uint, offset, limit int) ([]uint, []uint, int64, error) {
 	var list []friendentity.FriendRequest
 	var total int64

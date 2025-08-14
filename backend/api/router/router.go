@@ -6,6 +6,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"alice/api/handler"
+	chathdl "alice/api/handler/chat"
 	"alice/api/middleware"
 	"alice/application"
 	"alice/infra/config"
@@ -17,6 +18,7 @@ type Router struct {
 	roleHandler       *handler.RoleHandler
 	permissionHandler *handler.PermissionHandler
 	menuHandler       *handler.MenuHandler
+	chatHub           *chathdl.Hub
 }
 
 func NewRouter(
@@ -26,12 +28,15 @@ func NewRouter(
 	permissionHandler *handler.PermissionHandler,
 	menuHandler *handler.MenuHandler,
 ) *Router {
+	// 初始化聊天 Hub（基于应用层 ChatSvc）
+	hub := chathdl.NewHub(application.ChatSvc)
 	return &Router{
 		userHandler:       userHandler,
 		appUserHandler:    appUserHandler,
 		roleHandler:       roleHandler,
 		permissionHandler: permissionHandler,
 		menuHandler:       menuHandler,
+		chatHub:           hub,
 	}
 }
 
@@ -96,6 +101,14 @@ func (r *Router) SetupRoutes() *gin.Engine {
 			appProtected.GET("/friends/requests", r.appUserHandler.ListPendingRequests)
 			appProtected.POST("/friends/requests/:request_id/accept", r.appUserHandler.AcceptFriendRequest)
 			appProtected.POST("/friends/requests/:request_id/decline", r.appUserHandler.DeclineFriendRequest)
+
+			// Chat routes
+			chat := appProtected.Group("/chat")
+			{
+				chat.GET("/ws", r.chatHub.WS)
+				chat.GET("/history/:peer_id", r.chatHub.History)
+				chat.POST("/read", r.chatHub.MarkRead)
+			}
 		}
 	}
 
