@@ -17,6 +17,8 @@ type Config struct {
 
 // ServerConfig 服务器配置
 type ServerConfig struct {
+	// Host 监听的主机地址（如 0.0.0.0 或 127.0.0.1），留空则使用 Port 字段原样作为地址（兼容老配置）
+	Host          string `yaml:"host"`
 	Port          string `yaml:"port"`
 	EnableSwagger bool   `yaml:"enable_swagger"`
 }
@@ -57,6 +59,8 @@ func Load() *Config {
 	// 如果文件不存在或解析失败，使用环境变量和默认值
 	cfg = &Config{
 		Server: ServerConfig{
+			Host: getEnv("SERVER_HOST", "0.0.0.0"),
+			// 兼容：允许 SERVER_PORT 传入形如 ":8090" 或 "8090" 或 "127.0.0.1:8090"
 			Port:          getEnv("SERVER_PORT", ":8090"),
 			EnableSwagger: getEnv("ENABLE_SWAGGER", "true") == "true",
 		},
@@ -84,6 +88,9 @@ func Load() *Config {
 func applyDefaults(c *Config) {
 	if c.Server.Port == "" {
 		c.Server.Port = ":8090"
+	}
+	if c.Server.Host == "" {
+		c.Server.Host = "0.0.0.0"
 	}
 	// 若未在 YAML 中声明且未通过 env 设置, 默认开启 swagger
 	if !c.Server.EnableSwagger && getEnv("ENABLE_SWAGGER", "") == "" {
