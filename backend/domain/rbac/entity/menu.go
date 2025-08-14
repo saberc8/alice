@@ -35,17 +35,19 @@ type MenuMeta struct {
 	Hidden       *bool   `json:"hidden,omitempty"`
 	ExternalLink *string `json:"external_link,omitempty"`
 	Component    *string `json:"component,omitempty"`
+	// Perms 三段式权限码集合，例如 system:menu:list，用于前端按钮级控制
+	Perms []string `json:"perms,omitempty" gorm:"-"`
 }
 
 // Value 实现 driver.Valuer 接口，用于将 MenuMeta 转换为数据库值
 func (m MenuMeta) Value() (driver.Value, error) {
-	// 检查是否为空的MenuMeta
-	if m == (MenuMeta{}) ||
-		(m.Icon == nil && m.Caption == nil && m.Info == nil &&
-			m.Disabled == nil && m.Auth == nil && m.Hidden == nil &&
-			m.ExternalLink == nil && m.Component == nil) {
+	// 检查是否为空的MenuMeta（仅针对需要持久化的字段，不包含动态的 Perms）
+	if m.Icon == nil && m.Caption == nil && m.Info == nil &&
+		m.Disabled == nil && m.Auth == nil && m.Hidden == nil &&
+		m.ExternalLink == nil && m.Component == nil {
 		return "{}", nil // 返回空的JSON对象而不是null
 	}
+	// 直接序列化（包含 Perms），以便在数据库中持久化按钮权限
 	return json.Marshal(m)
 }
 

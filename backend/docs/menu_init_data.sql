@@ -23,47 +23,19 @@
 -- 1. 仪表板 (Group)
 --    ├── 工作台 (/workbench)
 --    └── 分析页 (/analysis)
---
 -- 2. 页面管理 (Group)
 --    ├── 系统管理 (/management)
---    │   ├── 用户管理 (/management/user)
---    │   │   ├── 用户资料 (/management/user/profile)
---    │   │   └── 账户管理 (/management/user/account)
---    │   └── 权限管理 (/management/rbac)
---    │       ├── 权限概览 (/management/rbac)
---    │       ├── 用户管理 (/management/rbac/users)
---    │       ├── 角色管理 (/management/rbac/roles)
---    │       ├── 权限管理 (/management/rbac/permissions)
---    │       ├── 菜单管理 (/management/rbac/menus)
---    │       └── 权限演示 (/management/rbac/demo)
---    ├── 多级菜单 (/menu_level)
---    │   ├── 菜单1-a (/menu_level/1a)
---    │   └── 菜单1-b (/menu_level/1b)
---    │       ├── 菜单2-a (/menu_level/1b/2a)
---    │       └── 菜单2-b (/menu_level/1b/2b)
---    │           ├── 菜单3-a (/menu_level/1b/2b/3a)
---    │           └── 菜单3-b (/menu_level/1b/2b/3b)
+--    │   ├── 用户管理 (/management/rbac/users)
+--    │   ├── 角色管理 (/management/rbac/roles)
+--    │   ├── 菜单管理 (/management/rbac/menus)
+--    │   ├── 权限管理 (/management/rbac/permissions)
 --    └── 错误页面 (/error)
 --        ├── 403无权限 (/error/403)
 --        ├── 404未找到 (/error/404)
 --        └── 500服务器错误 (/error/500)
---
--- 3. UI组件 (Group)
---    └── 组件 (/components)
---        ├── 图标 (/components/icon)
---        ├── 动画 (/components/animate)
---        ├── 滚动 (/components/scroll)
---        ├── 上传 (/components/upload)
---        ├── 图表 (/components/chart)
---        └── 消息提示 (/components/toast)
---
--- 4. 其他 (Group)
---    ├── 禁用菜单 (/disabled) [disabled]
---    ├── 标签菜单 (#label) [with badge]
---    ├── 外部链接 (/link)
---    │   ├── 外部链接 (/link/external-link)
---    │   └── 内嵌页面 (/link/iframe)
---    └── 空白页 (/blank)
+-- 3. 其他 (Group)
+--    ├── 外部链接 (/link/external-link)
+--    └── 内嵌页面 (/link/iframe)
 
 -- 菜单类型说明：
 -- MenuTypeGroup = 0     // 分组 - 用于菜单分组，如"仪表板"、"页面管理"等
@@ -82,6 +54,7 @@
 --   "external_link": "外部链接地址",
 --   "component": "前端组件路径"
 -- }
+-- 其中 perms（由后端注入）: ["system:menu:list", "system:menu:create", ...] 按用户/全量返回
 
 -- 注意事项：
 -- 1. 所有的title/name已经改为中文，不再使用i18n键值

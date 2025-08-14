@@ -40,7 +40,7 @@ func main() {
 	// 初始化服务
 	roleService := rbacService.NewRoleService(roleRepo)
 	permissionService := rbacService.NewPermissionService(permissionRepo)
-	menuService := rbacService.NewMenuService(menuRepo)
+	menuService := rbacService.NewMenuService(menuRepo, permissionRepo)
 	userService := userServicePkg.NewUserService(userRepo)
 
 	ctx := context.Background()
@@ -55,12 +55,14 @@ func main() {
 		log.Fatal("Failed to init roles:", err)
 	}
 
-	if err := initPermissions(ctx, permissionService); err != nil {
-		log.Fatal("Failed to init permissions:", err)
-	}
-
+	// 先初始化菜单（以便为权限绑定 menu_id）
 	if err := initMenus(ctx, db, menuService); err != nil {
 		log.Fatal("Failed to init menus:", err)
+	}
+
+	// 再初始化权限（三段式并绑定到对应菜单）
+	if err := initPermissions(ctx, db, permissionService); err != nil {
+		log.Fatal("Failed to init permissions:", err)
 	}
 
 	// 创建 admin 超级管理员并分配所有角色/权限/菜单
@@ -168,31 +170,51 @@ func initAdminUser(
 }
 
 // initPermissions 初始化权限
-func initPermissions(ctx context.Context, permissionService rbacService.PermissionService) error {
+func initPermissions(ctx context.Context, db *gorm.DB, permissionService rbacService.PermissionService) error {
+	// 通过菜单 code 查 ID
+	getMenuID := func(code string) *string {
+		m, err := repository.NewMenuRepository(db).GetByCode(ctx, code)
+		if err != nil || m == nil {
+			return nil
+		}
+		return &m.ID
+	}
+
+	// 三段式权限码，绑定到对应菜单
 	permissions := []rbacService.CreatePermissionRequest{
-		// 用户管理权限
-		{Name: "查看用户", Code: "user:read", Resource: "user", Action: "read", Status: entity.PermissionStatusActive},
-		{Name: "创建用户", Code: "user:create", Resource: "user", Action: "create", Status: entity.PermissionStatusActive},
-		{Name: "更新用户", Code: "user:update", Resource: "user", Action: "update", Status: entity.PermissionStatusActive},
-		{Name: "删除用户", Code: "user:delete", Resource: "user", Action: "delete", Status: entity.PermissionStatusActive},
+		// 角色管理 (system:roles)
+		{Name: "角色-查询", Code: "system:role:list", MenuID: getMenuID("system:roles"), Resource: "role", Action: "list", Status: entity.PermissionStatusActive},
+		{Name: "角色-详情", Code: "system:role:get", MenuID: getMenuID("system:roles"), Resource: "role", Action: "get", Status: entity.PermissionStatusActive},
+		{Name: "角色-创建", Code: "system:role:create", MenuID: getMenuID("system:roles"), Resource: "role", Action: "create", Status: entity.PermissionStatusActive},
+		{Name: "角色-更新", Code: "system:role:update", MenuID: getMenuID("system:roles"), Resource: "role", Action: "update", Status: entity.PermissionStatusActive},
+		{Name: "角色-删除", Code: "system:role:delete", MenuID: getMenuID("system:roles"), Resource: "role", Action: "delete", Status: entity.PermissionStatusActive},
+		{Name: "角色-分配菜单", Code: "system:role:menus:assign", MenuID: getMenuID("system:roles"), Resource: "role_menus", Action: "assign", Status: entity.PermissionStatusActive},
+		{Name: "角色-移除菜单", Code: "system:role:menus:remove", MenuID: getMenuID("system:roles"), Resource: "role_menus", Action: "remove", Status: entity.PermissionStatusActive},
+		{Name: "角色-菜单查询", Code: "system:role:menus:list", MenuID: getMenuID("system:roles"), Resource: "role_menus", Action: "list", Status: entity.PermissionStatusActive},
+		{Name: "角色-分配权限", Code: "system:role:permissions:assign", MenuID: getMenuID("system:roles"), Resource: "role_permissions", Action: "assign", Status: entity.PermissionStatusActive},
+		{Name: "角色-移除权限", Code: "system:role:permissions:remove", MenuID: getMenuID("system:roles"), Resource: "role_permissions", Action: "remove", Status: entity.PermissionStatusActive},
+		{Name: "角色-权限查询", Code: "system:role:permissions:get", MenuID: getMenuID("system:roles"), Resource: "role_permissions", Action: "get", Status: entity.PermissionStatusActive},
 
-		// 角色管理权限
-		{Name: "查看角色", Code: "role:read", Resource: "role", Action: "read", Status: entity.PermissionStatusActive},
-		{Name: "创建角色", Code: "role:create", Resource: "role", Action: "create", Status: entity.PermissionStatusActive},
-		{Name: "更新角色", Code: "role:update", Resource: "role", Action: "update", Status: entity.PermissionStatusActive},
-		{Name: "删除角色", Code: "role:delete", Resource: "role", Action: "delete", Status: entity.PermissionStatusActive},
+		// 用户管理 (system:users)
+		{Name: "用户-角色查询", Code: "system:user:roles:get", MenuID: getMenuID("system:users"), Resource: "user_roles", Action: "get", Status: entity.PermissionStatusActive},
+		{Name: "用户-分配角色", Code: "system:user:roles:assign", MenuID: getMenuID("system:users"), Resource: "user_roles", Action: "assign", Status: entity.PermissionStatusActive},
+		{Name: "用户-移除角色", Code: "system:user:roles:remove", MenuID: getMenuID("system:users"), Resource: "user_roles", Action: "remove", Status: entity.PermissionStatusActive},
+		{Name: "用户-权限查询", Code: "system:user:permissions:get", MenuID: getMenuID("system:users"), Resource: "user_permissions", Action: "get", Status: entity.PermissionStatusActive},
+		{Name: "用户-权限校验", Code: "system:user:permissions:check", MenuID: getMenuID("system:users"), Resource: "user_permissions", Action: "check", Status: entity.PermissionStatusActive},
 
-		// 权限管理权限
-		{Name: "查看权限", Code: "permission:read", Resource: "permission", Action: "read", Status: entity.PermissionStatusActive},
-		{Name: "创建权限", Code: "permission:create", Resource: "permission", Action: "create", Status: entity.PermissionStatusActive},
-		{Name: "更新权限", Code: "permission:update", Resource: "permission", Action: "update", Status: entity.PermissionStatusActive},
-		{Name: "删除权限", Code: "permission:delete", Resource: "permission", Action: "delete", Status: entity.PermissionStatusActive},
+		// 权限管理 (system:permissions)
+		{Name: "权限-查询", Code: "system:permission:list", MenuID: getMenuID("system:permissions"), Resource: "permission", Action: "list", Status: entity.PermissionStatusActive},
+		{Name: "权限-详情", Code: "system:permission:get", MenuID: getMenuID("system:permissions"), Resource: "permission", Action: "get", Status: entity.PermissionStatusActive},
+		{Name: "权限-创建", Code: "system:permission:create", MenuID: getMenuID("system:permissions"), Resource: "permission", Action: "create", Status: entity.PermissionStatusActive},
+		{Name: "权限-更新", Code: "system:permission:update", MenuID: getMenuID("system:permissions"), Resource: "permission", Action: "update", Status: entity.PermissionStatusActive},
+		{Name: "权限-删除", Code: "system:permission:delete", MenuID: getMenuID("system:permissions"), Resource: "permission", Action: "delete", Status: entity.PermissionStatusActive},
 
-		// 菜单管理权限
-		{Name: "查看菜单", Code: "menu:read", Resource: "menu", Action: "read", Status: entity.PermissionStatusActive},
-		{Name: "创建菜单", Code: "menu:create", Resource: "menu", Action: "create", Status: entity.PermissionStatusActive},
-		{Name: "更新菜单", Code: "menu:update", Resource: "menu", Action: "update", Status: entity.PermissionStatusActive},
-		{Name: "删除菜单", Code: "menu:delete", Resource: "menu", Action: "delete", Status: entity.PermissionStatusActive},
+		// 菜单管理 (system:menus)
+		{Name: "菜单-查询", Code: "system:menu:list", MenuID: getMenuID("system:menus"), Resource: "menu", Action: "list", Status: entity.PermissionStatusActive},
+		{Name: "菜单-详情", Code: "system:menu:get", MenuID: getMenuID("system:menus"), Resource: "menu", Action: "get", Status: entity.PermissionStatusActive},
+		{Name: "菜单-创建", Code: "system:menu:create", MenuID: getMenuID("system:menus"), Resource: "menu", Action: "create", Status: entity.PermissionStatusActive},
+		{Name: "菜单-更新", Code: "system:menu:update", MenuID: getMenuID("system:menus"), Resource: "menu", Action: "update", Status: entity.PermissionStatusActive},
+		{Name: "菜单-删除", Code: "system:menu:delete", MenuID: getMenuID("system:menus"), Resource: "menu", Action: "delete", Status: entity.PermissionStatusActive},
 	}
 
 	for _, req := range permissions {

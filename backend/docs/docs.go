@@ -1128,6 +1128,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/roles/{id}/menus/tree": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取指定角色的菜单树，并在 meta.perms 中下发该角色的按钮权限",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "RoleMenus"
+                ],
+                "summary": "角色菜单树",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "角色ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/roles/{id}/permissions": {
             "get": {
                 "security": [
@@ -1670,6 +1716,13 @@ const docTemplate = `{
                 },
                 "info": {
                     "type": "string"
+                },
+                "perms": {
+                    "description": "Perms 三段式权限码集合，例如 system:menu:list，用于前端按钮级控制",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -1923,6 +1976,9 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 500
                 },
+                "menu_id": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string",
                     "maxLength": 100
@@ -2028,6 +2084,9 @@ const docTemplate = `{
                     "maxLength": 500
                 },
                 "id": {
+                    "type": "string"
+                },
+                "menu_id": {
                     "type": "string"
                 },
                 "name": {

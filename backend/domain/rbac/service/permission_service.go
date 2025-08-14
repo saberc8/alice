@@ -41,12 +41,16 @@ type PermissionService interface {
 
 	// CheckUserPermission 检查用户权限
 	CheckUserPermission(ctx context.Context, userID, resource, action string) (bool, error)
+
+	// CheckUserPermissionByCode 基于权限码检查用户是否有权限
+	CheckUserPermissionByCode(ctx context.Context, userID, code string) (bool, error)
 }
 
 // CreatePermissionRequest 创建权限请求
 type CreatePermissionRequest struct {
 	Name        string                  `json:"name" validate:"required,max=100"`
 	Code        string                  `json:"code" validate:"required,max=100"`
+	MenuID      *string                 `json:"menu_id,omitempty"`
 	Resource    string                  `json:"resource" validate:"required,max=100"`
 	Action      string                  `json:"action" validate:"required,max=50"`
 	Description *string                 `json:"description,omitempty" validate:"omitempty,max=500"`
@@ -58,6 +62,7 @@ type UpdatePermissionRequest struct {
 	ID          string                  `json:"id" validate:"required"`
 	Name        string                  `json:"name" validate:"required,max=100"`
 	Code        string                  `json:"code" validate:"required,max=100"`
+	MenuID      *string                 `json:"menu_id,omitempty"`
 	Resource    string                  `json:"resource" validate:"required,max=100"`
 	Action      string                  `json:"action" validate:"required,max=50"`
 	Description *string                 `json:"description,omitempty" validate:"omitempty,max=500"`
@@ -103,6 +108,7 @@ func (s *permissionService) CreatePermission(ctx context.Context, req *CreatePer
 		ID:          uuid.New().String(),
 		Name:        req.Name,
 		Code:        req.Code,
+		MenuID:      req.MenuID,
 		Resource:    req.Resource,
 		Action:      req.Action,
 		Description: req.Description,
@@ -179,6 +185,7 @@ func (s *permissionService) UpdatePermission(ctx context.Context, req *UpdatePer
 	// 更新权限信息
 	existing.Name = req.Name
 	existing.Code = req.Code
+	existing.MenuID = req.MenuID
 	existing.Resource = req.Resource
 	existing.Action = req.Action
 	existing.Description = req.Description
@@ -263,5 +270,15 @@ func (s *permissionService) CheckUserPermission(ctx context.Context, userID, res
 		return false, fmt.Errorf("检查用户权限失败: %w", err)
 	}
 
+	return hasPermission, nil
+}
+
+// CheckUserPermissionByCode 基于权限码检查用户是否有权限
+func (s *permissionService) CheckUserPermissionByCode(ctx context.Context, userID, code string) (bool, error) {
+	hasPermission, err := s.permissionRepo.CheckUserPermissionByCode(ctx, userID, code)
+	if err != nil {
+		logger.Errorf("按权限码检查用户权限失败: %v", err)
+		return false, fmt.Errorf("按权限码检查用户权限失败: %w", err)
+	}
 	return hasPermission, nil
 }

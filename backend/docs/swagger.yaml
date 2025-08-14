@@ -18,6 +18,11 @@ definitions:
         type: string
       info:
         type: string
+      perms:
+        description: Perms 三段式权限码集合，例如 system:menu:list，用于前端按钮级控制
+        items:
+          type: string
+        type: array
     type: object
   entity.MenuStatus:
     enum:
@@ -191,6 +196,8 @@ definitions:
       description:
         maxLength: 500
         type: string
+      menu_id:
+        type: string
       name:
         maxLength: 100
         type: string
@@ -266,6 +273,8 @@ definitions:
         maxLength: 500
         type: string
       id:
+        type: string
+      menu_id:
         type: string
       name:
         maxLength: 100
@@ -1002,6 +1011,35 @@ paths:
       security:
       - BearerAuth: []
       summary: 为角色分配菜单
+      tags:
+      - RoleMenus
+  /roles/{id}/menus/tree:
+    get:
+      description: 获取指定角色的菜单树，并在 meta.perms 中下发该角色的按钮权限
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 角色菜单树
       tags:
       - RoleMenus
   /roles/{id}/permissions:

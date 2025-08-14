@@ -43,7 +43,7 @@ func Init(ctx context.Context, cfg *config.Config) error {
 	// 初始化RBAC服务
 	RoleSvc = rbacService.NewRoleService(roleRepo)
 	PermissionSvc = rbacService.NewPermissionService(permissionRepo)
-	MenuSvc = rbacService.NewMenuService(menuRepo)
+	MenuSvc = rbacService.NewMenuService(menuRepo, permissionRepo)
 
 	logger.Info("Application initialized successfully")
 	return nil

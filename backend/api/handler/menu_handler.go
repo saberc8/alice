@@ -346,3 +346,31 @@ func (h *MenuHandler) GetUserMenuTree(c *gin.Context) {
 
 	c.JSON(http.StatusOK, model.SuccessResponse(tree))
 }
+
+// GetRoleMenuTree 获取角色菜单树（按角色注入 perms）
+// @Summary 角色菜单树
+// @Description 获取指定角色的菜单树，并在 meta.perms 中下发该角色的按钮权限
+// @Tags RoleMenus
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "角色ID"
+// @Success 200 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /roles/{id}/menus/tree [get]
+func (h *MenuHandler) GetRoleMenuTree(c *gin.Context) {
+	roleID := c.Param("id")
+	if roleID == "" {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "角色ID不能为空"))
+		return
+	}
+
+	tree, err := h.menuService.GetRoleMenuTree(c.Request.Context(), roleID)
+	if err != nil {
+		logger.Errorf("获取角色菜单树失败: %v", err)
+		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, model.SuccessResponse(tree))
+}

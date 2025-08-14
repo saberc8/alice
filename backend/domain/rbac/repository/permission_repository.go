@@ -39,4 +39,16 @@ type PermissionRepository interface {
 
 	// CheckUserPermission 检查用户是否有指定权限
 	CheckUserPermission(ctx context.Context, userID, resource, action string) (bool, error)
+
+	// CheckUserPermissionByCode 根据权限码检查用户是否有指定权限
+	CheckUserPermissionByCode(ctx context.Context, userID, code string) (bool, error)
+
+	// GetByMenuIDs 根据菜单ID集合获取权限列表
+	GetByMenuIDs(ctx context.Context, menuIDs []string) ([]*entity.Permission, error)
+
+	// GetByUserIDAndMenuIDs 根据用户和菜单ID集合获取权限列表
+	GetByUserIDAndMenuIDs(ctx context.Context, userID string, menuIDs []string) ([]*entity.Permission, error)
+
+	// GetByRoleIDAndMenuIDs 根据角色和菜单ID集合获取权限列表
+	GetByRoleIDAndMenuIDs(ctx context.Context, roleID string, menuIDs []string) ([]*entity.Permission, error)
 }

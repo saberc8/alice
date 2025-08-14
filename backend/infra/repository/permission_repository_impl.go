@@ -172,3 +172,65 @@ func (r *permissionRepositoryImpl) CheckUserPermission(ctx context.Context, user
 
 	return count > 0, err
 }
+
+// CheckUserPermissionByCode 根据权限码检查用户权限
+func (r *permissionRepositoryImpl) CheckUserPermissionByCode(ctx context.Context, userID, code string) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Table("permissions").
+		Joins("INNER JOIN role_permissions ON permissions.id = role_permissions.permission_id").
+		Joins("INNER JOIN user_roles ON role_permissions.role_id = user_roles.role_id").
+		Joins("INNER JOIN roles ON user_roles.role_id = roles.id").
+		Where("user_roles.user_id = ? AND permissions.code = ? AND permissions.status = ? AND roles.status = ?",
+			userID, code, entity.PermissionStatusActive, entity.RoleStatusActive).
+		Count(&count).Error
+
+	return count > 0, err
+}
+
+// GetByMenuIDs 根据菜单ID集合获取权限列表
+func (r *permissionRepositoryImpl) GetByMenuIDs(ctx context.Context, menuIDs []string) ([]*entity.Permission, error) {
+	if len(menuIDs) == 0 {
+		return []*entity.Permission{}, nil
+	}
+	var permissions []*entity.Permission
+	err := r.db.WithContext(ctx).
+		Where("menu_id IN ? AND status = ?", menuIDs, entity.PermissionStatusActive).
+		Order("created_at ASC").
+		Find(&permissions).Error
+	return permissions, err
+}
+
+// GetByUserIDAndMenuIDs 根据用户和菜单ID集合获取权限列表
+func (r *permissionRepositoryImpl) GetByUserIDAndMenuIDs(ctx context.Context, userID string, menuIDs []string) ([]*entity.Permission, error) {
+	if len(menuIDs) == 0 {
+		return []*entity.Permission{}, nil
+	}
+	var permissions []*entity.Permission
+	err := r.db.WithContext(ctx).
+		Select("DISTINCT permissions.*").
+		Table("permissions").
+		Joins("INNER JOIN role_permissions ON permissions.id = role_permissions.permission_id").
+		Joins("INNER JOIN user_roles ON role_permissions.role_id = user_roles.role_id").
+		Joins("INNER JOIN roles ON user_roles.role_id = roles.id").
+		Where("user_roles.user_id = ? AND permissions.menu_id IN ? AND permissions.status = ? AND roles.status = ?",
+			userID, menuIDs, entity.PermissionStatusActive, entity.RoleStatusActive).
+		Find(&permissions).Error
+	return permissions, err
+}
+
+// GetByRoleIDAndMenuIDs 根据角色和菜单ID集合获取权限列表
+func (r *permissionRepositoryImpl) GetByRoleIDAndMenuIDs(ctx context.Context, roleID string, menuIDs []string) ([]*entity.Permission, error) {
+	if len(menuIDs) == 0 {
+		return []*entity.Permission{}, nil
+	}
+	var permissions []*entity.Permission
+	err := r.db.WithContext(ctx).
+		Select("permissions.*").
+		Table("permissions").
+		Joins("INNER JOIN role_permissions ON permissions.id = role_permissions.permission_id").
+		Where("role_permissions.role_id = ? AND permissions.menu_id IN ? AND permissions.status = ?",
+			roleID, menuIDs, entity.PermissionStatusActive).
+		Find(&permissions).Error
+	return permissions, err
+}
