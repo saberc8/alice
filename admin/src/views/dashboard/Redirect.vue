@@ -1,14 +1,27 @@
 <script setup lang="ts">
-import { useAuthStore } from '@/stores/auth'
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useMenuStore } from '@/stores/menu'
-const auth = useAuthStore()
+
+const router = useRouter()
 const menu = useMenuStore()
+
+function findFirstPath(tree: any[]): string | null {
+	const stack = [...tree]
+	while (stack.length) {
+		const n = stack.shift()
+		if (n?.type === 2 && n?.path) return n.path
+		if (n?.children?.length) stack.unshift(...n.children)
+	}
+	return null
+}
+
+onMounted(() => {
+	const p = findFirstPath(menu.tree)
+	if (p) router.replace(p)
+})
 </script>
 
 <template>
-	<a-card>
-		<template #title>登录成功</template>
-		<div>欢迎，{{ auth.profile?.username }}。</div>
-		<div style="margin-top:8px;">已获取菜单项数：{{ menu.tree.length }}</div>
-	</a-card>
+	<a-spin dot :loading="true" style="width:100%;margin-top:20vh;display:flex;justify-content:center" />
 </template>

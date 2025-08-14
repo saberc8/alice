@@ -4,10 +4,11 @@ import { getUserMenusTree, type MenuItem } from '@/api/menu'
 interface State {
 	tree: MenuItem[]
 	loaded: boolean
+	routesRegistered: boolean
 }
 
 export const useMenuStore = defineStore('menu', {
-	state: (): State => ({ tree: [], loaded: false }),
+	state: (): State => ({ tree: [], loaded: false, routesRegistered: false }),
 	actions: {
 		async fetchMenusForUser(userId?: number) {
 			if (!userId) return []
@@ -19,6 +20,7 @@ export const useMenuStore = defineStore('menu', {
 		reset() {
 			this.tree = []
 			this.loaded = false
+			this.routesRegistered = false
 		},
 	},
 })
