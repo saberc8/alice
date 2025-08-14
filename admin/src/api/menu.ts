@@ -24,3 +24,24 @@ export function getRoleMenusTree(roleId: string) {
 export function getRoleMenus(roleId: string) {
   return http.get<MenuItem[]>(`/roles/${roleId}/menus`)
 }
+
+// ---- CRUD for menus ----
+export function listMenus() {
+  return http.get<MenuItem[]>(`/menus`)
+}
+
+export function getMenuTree() {
+  return http.get<MenuItem[]>(`/menus/tree`)
+}
+
+export function createMenu(data: Partial<MenuItem>) {
+  return http.post(`/menus`, data)
+}
+
+export function updateMenu(id: string, data: Partial<MenuItem>) {
+  return http.put(`/menus/${id}`, data)
+}
+
+export function deleteMenu(id: string) {
+  return http.delete(`/menus/${id}`)
+}

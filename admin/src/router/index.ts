@@ -21,6 +21,8 @@ function resolveViewByMeta(metaComponent?: string) {
 	if (comp.startsWith('/')) comp = comp.slice(1)
 	// strip optional leading 'src/'
 	if (comp.startsWith('src/')) comp = comp.slice(4)
+	// accept 'pages/...' as alias of 'views/...'
+	if (comp.startsWith('pages/')) comp = `views/${comp.slice(6)}`
 	// now expect 'views/...'
 	if (!comp.startsWith('views/')) return null
 	// build candidate keys for import.meta.glob
