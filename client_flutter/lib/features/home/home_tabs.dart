@@ -3,6 +3,10 @@ import 'package:client_flutter/core/app/profile_service.dart';
 import 'package:client_flutter/core/app/friends_service.dart';
 import 'package:client_flutter/features/contacts/friend_profile_page.dart';
 import 'package:client_flutter/core/chat/chat_service.dart';
+import 'package:client_flutter/ui/we_tabbar.dart';
+import 'package:client_flutter/ui/we_appbar.dart';
+import 'package:client_flutter/ui/we_cell.dart';
+import 'package:client_flutter/ui/we_colors.dart';
 
 class HomeTabs extends StatefulWidget {
   const HomeTabs({super.key, required this.onLogout});
@@ -27,24 +31,30 @@ class _HomeTabsState extends State<HomeTabs> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _index, children: _pages),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _index,
-        type: BottomNavigationBarType.fixed,
+      bottomNavigationBar: WeTabBar(
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            label: '会话',
+          WeTabItem(
+            icon: Icons.chat_bubble_outline,
+            iconActive: Icons.chat_bubble,
+            label: '微信',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.contacts_outlined),
+          WeTabItem(
+            icon: Icons.contacts_outlined,
+            iconActive: Icons.contacts,
             label: '通讯录',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.explore_outlined),
+          WeTabItem(
+            icon: Icons.explore_outlined,
+            iconActive: Icons.explore,
             label: '发现',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: '我'),
+          WeTabItem(
+            icon: Icons.person_outline,
+            iconActive: Icons.person,
+            label: '我',
+          ),
         ],
+        currentIndex: _index,
         onTap: (i) => setState(() => _index = i),
       ),
     );
@@ -104,8 +114,8 @@ class _ConversationsPageState extends State<_ConversationsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('会话'),
+      appBar: WeAppBar(
+        title: '微信',
         actions: [
           IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
         ],
@@ -127,7 +137,11 @@ class _ConversationsPageState extends State<_ConversationsPage> {
                         )
                         : ListView.separated(
                           itemCount: _items.length,
-                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          separatorBuilder:
+                              (_, __) => const Divider(
+                                height: 1,
+                                color: WeColors.divider,
+                              ),
                           itemBuilder: (ctx, i) {
                             final it = _items[i];
                             final last =
@@ -139,28 +153,27 @@ class _ConversationsPageState extends State<_ConversationsPage> {
                                 last != null
                                     ? (last['content']?.toString() ?? '')
                                     : '';
-                            return ListTile(
-                              leading: Stack(
-                                children: [
-                                  const CircleAvatar(
-                                    child: Icon(Icons.person_outline),
-                                  ),
-                                  if (unread > 0)
-                                    Positioned(
-                                      right: 0,
-                                      top: 0,
-                                      child: Container(
+                            return WeCell(
+                              leading: CircleAvatar(
+                                backgroundColor: Colors.grey.shade300,
+                                child: const Icon(
+                                  Icons.person_outline,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              title: '用户$peerId',
+                              subtitle: preview,
+                              trailing:
+                                  unread > 0
+                                      ? Container(
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 6,
                                           vertical: 2,
                                         ),
                                         decoration: BoxDecoration(
-                                          color:
-                                              Theme.of(
-                                                context,
-                                              ).colorScheme.error,
+                                          color: WeColors.badge,
                                           borderRadius: BorderRadius.circular(
-                                            10,
+                                            12,
                                           ),
                                         ),
                                         child: Text(
@@ -172,16 +185,8 @@ class _ConversationsPageState extends State<_ConversationsPage> {
                                             fontSize: 10,
                                           ),
                                         ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              title: Text('用户$peerId'),
-                              subtitle: Text(
-                                preview,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                                      )
+                                      : const SizedBox.shrink(),
                               onTap: () => _openChat(it),
                             );
                           },
@@ -270,8 +275,8 @@ class _ContactsPageState extends State<_ContactsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('通讯录'),
+      appBar: WeAppBar(
+        title: '通讯录',
         actions: [
           IconButton(
             onPressed:
@@ -307,10 +312,14 @@ class _ContactsPageState extends State<_ContactsPage> {
                         )
                         : ListView.separated(
                           itemCount: _friends.length,
-                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          separatorBuilder:
+                              (_, __) => const Divider(
+                                height: 1,
+                                color: WeColors.divider,
+                              ),
                           itemBuilder: (ctx, i) {
                             final u = _friends[i];
-                            return ListTile(
+                            return WeCell(
                               leading: CircleAvatar(
                                 backgroundImage:
                                     (u['avatar'] != null &&
@@ -323,12 +332,11 @@ class _ContactsPageState extends State<_ContactsPage> {
                                         ? const Icon(Icons.person)
                                         : null,
                               ),
-                              title: Text(
-                                u['nickname']?.toString().isNotEmpty == true
-                                    ? u['nickname']
-                                    : (u['email'] ?? '-'),
-                              ),
-                              subtitle: Text(u['email'] ?? ''),
+                              title:
+                                  u['nickname']?.toString().isNotEmpty == true
+                                      ? u['nickname']
+                                      : (u['email'] ?? '-'),
+                              subtitle: u['email'] ?? '',
                               onTap: () {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
@@ -420,7 +428,7 @@ class _FriendRequestsPageState extends State<_FriendRequestsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('待处理好友请求')),
+      appBar: const WeAppBar(title: '待处理好友请求'),
       body:
           _loading
               ? const Center(child: CircularProgressIndicator())
@@ -438,19 +446,23 @@ class _FriendRequestsPageState extends State<_FriendRequestsPage> {
                         )
                         : ListView.separated(
                           itemCount: _requestIds.length,
-                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          separatorBuilder:
+                              (_, __) => const Divider(
+                                height: 1,
+                                color: WeColors.divider,
+                              ),
                           itemBuilder: (ctx, i) {
                             final reqId = _requestIds[i];
                             final requesterId =
                                 i < _requesterIds.length
                                     ? _requesterIds[i]
                                     : null;
-                            return ListTile(
+                            return WeCell(
                               leading: const CircleAvatar(
                                 child: Icon(Icons.person_outline),
                               ),
-                              title: Text('请求者 ID: ${requesterId ?? '-'}'),
-                              subtitle: Text('请求 ID: $reqId'),
+                              title: '请求者 ID: ${requesterId ?? '-'}',
+                              subtitle: '请求 ID: $reqId',
                               trailing: Wrap(
                                 spacing: 8,
                                 children: [
@@ -476,9 +488,9 @@ class _DiscoverPage extends StatelessWidget {
   const _DiscoverPage();
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('发现')),
-      body: const Center(child: Text('发现内容占位')),
+    return const Scaffold(
+      appBar: WeAppBar(title: '发现'),
+      body: Center(child: Text('发现内容占位')),
     );
   }
 }
@@ -526,8 +538,8 @@ class _ProfilePageState extends State<_ProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('我'),
+      appBar: WeAppBar(
+        title: '我',
         actions: [
           IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
           IconButton(onPressed: _logout, icon: const Icon(Icons.logout)),
@@ -540,28 +552,89 @@ class _ProfilePageState extends State<_ProfilePage> {
               ? Center(child: Text('加载失败: $_error'))
               : _profile == null
               ? const Center(child: Text('暂无资料'))
-              : ListView(
-                padding: const EdgeInsets.all(16),
+              : Column(
                 children: [
-                  CircleAvatar(
-                    radius: 36,
-                    backgroundImage:
-                        (_profile!['avatar'] != null &&
-                                (_profile!['avatar'] as String).isNotEmpty)
-                            ? NetworkImage(_profile!['avatar'])
-                            : null,
-                    child:
-                        (_profile!['avatar'] == null ||
-                                (_profile!['avatar'] as String).isEmpty)
-                            ? const Icon(Icons.person, size: 36)
-                            : null,
+                  const SizedBox(height: 12),
+                  Material(
+                    color: Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 28,
+                            backgroundImage:
+                                (_profile!['avatar'] != null &&
+                                        (_profile!['avatar'] as String)
+                                            .isNotEmpty)
+                                    ? NetworkImage(_profile!['avatar'])
+                                    : null,
+                            child:
+                                (_profile!['avatar'] == null ||
+                                        (_profile!['avatar'] as String).isEmpty)
+                                    ? const Icon(Icons.person, size: 28)
+                                    : null,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _profile!['nickname'] ?? '-',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  _profile!['email'] ?? '-',
+                                  style: const TextStyle(
+                                    color: WeColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.qr_code, color: Colors.grey),
+                        ],
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  Text('Email: ${_profile!['email'] ?? '-'}'),
-                  const SizedBox(height: 8),
-                  Text('昵称: ${_profile!['nickname'] ?? '-'}'),
-                  const SizedBox(height: 8),
-                  Text('签名: ${_profile!['bio'] ?? '-'}'),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: ListView(
+                      children: const [
+                        WeCell(
+                          title: '支付',
+                          leading: Icon(
+                            Icons.payment_outlined,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        Divider(height: 1, color: WeColors.divider),
+                        WeCell(
+                          title: '收藏',
+                          leading: Icon(
+                            Icons.star_outline,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        Divider(height: 1, color: WeColors.divider),
+                        WeCell(
+                          title: '设置',
+                          leading: Icon(
+                            Icons.settings_outlined,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
     );

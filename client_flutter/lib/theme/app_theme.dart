@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:client_flutter/ui/we_colors.dart';
 
 // Global theme management with primary color #57be6a
 class AppTheme {
-  static const Color primary = Color(0xFF57BE6A);
-  static const Color primaryDark = Color(0xFF2E9B47);
-  static const Color primaryLight = Color(0xFFA6E0B7);
+  // Switch to WeChat brand color
+  static const Color primary = WeColors.brand;
+  static const Color primaryDark = WeColors.brandDark;
+  static const Color primaryLight = WeColors.brandLight;
 
   static ThemeData light() {
     final base = ThemeData.light(useMaterial3: true);
     return base.copyWith(
       colorScheme: ColorScheme.fromSeed(seedColor: primary),
       primaryColor: primary,
+      scaffoldBackgroundColor: WeColors.background,
       appBarTheme: const AppBarTheme(
-        backgroundColor: primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: WeColors.textPrimary,
+        elevation: 0.4,
+        surfaceTintColor: Colors.transparent,
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: primary,
@@ -29,6 +33,7 @@ class AppTheme {
         selectedItemColor: primary,
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
       ),
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),

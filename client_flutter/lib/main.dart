@@ -42,6 +42,7 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       title: 'Alice Client',
       theme: AppTheme.light(),
+      debugShowCheckedModeBanner: false,
       onGenerateRoute: (settings) {
         if (settings.name == '/friend_profile') {
           final user = settings.arguments as Map<String, dynamic>;

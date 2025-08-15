@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:client_flutter/core/chat/chat_service.dart';
 import 'package:flutter/material.dart';
+import 'package:client_flutter/ui/we_colors.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key, required this.peer});
@@ -179,14 +180,14 @@ class _ChatPageState extends State<ChatPage> {
                               decoration: BoxDecoration(
                                 color:
                                     isMe
-                                        ? Theme.of(context).colorScheme.primary
-                                        : Colors.grey.shade200,
+                                        ? WeColors.bubbleMe
+                                        : WeColors.bubbleOther,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
                                 m['content']?.toString() ?? '',
                                 style: TextStyle(
-                                  color: isMe ? Colors.white : Colors.black87,
+                                  color: isMe ? Colors.black : Colors.black87,
                                 ),
                               ),
                             ),
@@ -201,7 +202,10 @@ class _ChatPageState extends State<ChatPage> {
               children: [
                 IconButton(
                   onPressed: () {},
-                  icon: const Icon(Icons.add_circle_outline),
+                  icon: const Icon(
+                    Icons.add_circle_outline,
+                    color: WeColors.textSecondary,
+                  ),
                 ),
                 Expanded(
                   child: TextField(
@@ -217,7 +221,7 @@ class _ChatPageState extends State<ChatPage> {
                 ),
                 IconButton(
                   onPressed: _send,
-                  icon: const Icon(Icons.send_rounded),
+                  icon: const Icon(Icons.send_rounded, color: WeColors.brand),
                 ),
               ],
             ),

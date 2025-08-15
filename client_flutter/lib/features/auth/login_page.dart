@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:client_flutter/theme/app_theme.dart';
 import 'package:client_flutter/core/auth/auth_service.dart';
+import 'package:client_flutter/ui/we_appbar.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key, required this.onLogin});
@@ -58,7 +59,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isRegister ? '注册' : '登录')),
+      appBar: WeAppBar(title: _isRegister ? '注册' : '登录'),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
