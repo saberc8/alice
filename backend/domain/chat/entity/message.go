@@ -15,3 +15,10 @@ type Message struct {
 }
 
 func (Message) TableName() string { return "app_chat_messages" }
+
+// Conversation 最近会话聚合
+type Conversation struct {
+	PeerID      uint     `json:"peer_id"`
+	LastMessage *Message `json:"last_message"`
+	UnreadCount int64    `json:"unread_count"`
+}

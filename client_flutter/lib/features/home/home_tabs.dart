@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:client_flutter/core/app/profile_service.dart';
 import 'package:client_flutter/core/app/friends_service.dart';
 import 'package:client_flutter/features/contacts/friend_profile_page.dart';
+import 'package:client_flutter/core/chat/chat_service.dart';
 
 class HomeTabs extends StatefulWidget {
   const HomeTabs({super.key, required this.onLogout});
@@ -16,7 +17,7 @@ class _HomeTabsState extends State<HomeTabs> {
   int _index = 0;
 
   final _pages = const [
-    _FeedPage(),
+    _ConversationsPage(),
     _ContactsPage(),
     _DiscoverPage(),
     _ProfilePage(),
@@ -31,8 +32,8 @@ class _HomeTabsState extends State<HomeTabs> {
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.book_outlined),
-            label: '小绿书',
+            icon: Icon(Icons.chat_bubble_outline),
+            label: '会话',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.contacts_outlined),
@@ -50,13 +51,142 @@ class _HomeTabsState extends State<HomeTabs> {
   }
 }
 
-class _FeedPage extends StatelessWidget {
-  const _FeedPage();
+class _ConversationsPage extends StatefulWidget {
+  const _ConversationsPage();
+  @override
+  State<_ConversationsPage> createState() => _ConversationsPageState();
+}
+
+class _ConversationsPageState extends State<_ConversationsPage> {
+  final _chat = ChatService();
+  List<Map<String, dynamic>> _items = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final data = await _chat.getConversations();
+      final items = (data['items'] as List?)?.cast<Map>() ?? [];
+      if (!mounted) return;
+      setState(() => _items = items.cast<Map<String, dynamic>>());
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _openChat(Map<String, dynamic> item) {
+    final peerId = item['peer_id'];
+    // 简单推断 peer 基本字段（实际可请求用户资料）
+    Navigator.of(context).pushNamed(
+      '/chat',
+      arguments: {
+        'id': peerId,
+        'nickname': '用户$peerId',
+        'email': '',
+        'avatar': '',
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('小绿书')),
-      body: const Center(child: Text('Feed 列表占位')),
+      appBar: AppBar(
+        title: const Text('会话'),
+        actions: [
+          IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
+        ],
+      ),
+      body:
+          _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null
+              ? Center(child: Text('加载失败: $_error'))
+              : RefreshIndicator(
+                onRefresh: _load,
+                child:
+                    _items.isEmpty
+                        ? ListView(
+                          children: const [
+                            SizedBox(height: 160),
+                            Center(child: Text('暂无会话')),
+                          ],
+                        )
+                        : ListView.separated(
+                          itemCount: _items.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (ctx, i) {
+                            final it = _items[i];
+                            final last =
+                                (it['last_message'] as Map?)
+                                    ?.cast<String, dynamic>();
+                            final unread = (it['unread_count'] ?? 0) as int;
+                            final peerId = it['peer_id'];
+                            final preview =
+                                last != null
+                                    ? (last['content']?.toString() ?? '')
+                                    : '';
+                            return ListTile(
+                              leading: Stack(
+                                children: [
+                                  const CircleAvatar(
+                                    child: Icon(Icons.person_outline),
+                                  ),
+                                  if (unread > 0)
+                                    Positioned(
+                                      right: 0,
+                                      top: 0,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              Theme.of(
+                                                context,
+                                              ).colorScheme.error,
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          unread > 99
+                                              ? '99+'
+                                              : unread.toString(),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              title: Text('用户$peerId'),
+                              subtitle: Text(
+                                preview,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              onTap: () => _openChat(it),
+                            );
+                          },
+                        ),
+              ),
     );
   }
 }

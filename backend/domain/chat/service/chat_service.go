@@ -16,6 +16,7 @@ type ChatService interface {
 	Send(senderID, receiverID uint, content string, msgType string) (*chatentity.Message, error)
 	History(a, b uint, page, pageSize int) ([]*chatentity.Message, int64, error)
 	MarkRead(a, b uint, beforeID uint) error
+	RecentConversations(self uint, page, pageSize int) ([]*chatentity.Conversation, int64, error)
 }
 
 type chatServiceImpl struct {
@@ -63,6 +64,17 @@ func (s *chatServiceImpl) History(a, b uint, page, pageSize int) ([]*chatentity.
 
 func (s *chatServiceImpl) MarkRead(a, b uint, beforeID uint) error {
 	return s.repo.MarkRead(a, b, beforeID)
+}
+
+func (s *chatServiceImpl) RecentConversations(self uint, page, pageSize int) ([]*chatentity.Conversation, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize <= 0 || pageSize > 100 {
+		pageSize = 20
+	}
+	offset := (page - 1) * pageSize
+	return s.repo.ListRecentConversations(self, offset, pageSize)
 }
 
 func firstNonEmpty(vals ...string) string {

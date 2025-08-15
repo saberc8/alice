@@ -108,6 +108,7 @@ func (r *Router) SetupRoutes() *gin.Engine {
 				chat.GET("/ws", r.chatHub.WS)
 				chat.GET("/history/:peer_id", r.chatHub.History)
 				chat.POST("/read", r.chatHub.MarkRead)
+				chat.GET("/conversations", r.chatHub.Conversations)
 			}
 		}
 	}

@@ -8,4 +8,5 @@ type MessageRepository interface {
 	Save(msg *chatentity.Message) error
 	ListConversation(a, b uint, offset, limit int) ([]*chatentity.Message, int64, error)
 	MarkRead(a, b uint, beforeID uint) error
+	ListRecentConversations(self uint, offset, limit int) ([]*chatentity.Conversation, int64, error)
 }

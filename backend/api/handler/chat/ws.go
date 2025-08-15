@@ -102,6 +102,28 @@ func (h *Hub) History(c *gin.Context) {
 	}))
 }
 
+// Conversations 最近会话列表
+func (h *Hub) Conversations(c *gin.Context) {
+	uid, err := getAppUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, apimodel.ErrorResponse(apimodel.CodeUnauthorized, "unauthorized"))
+		return
+	}
+	page := parseIntQuery(c, "page", 1)
+	pageSize := parseIntQuery(c, "page_size", 20)
+	items, total, err := h.chat.RecentConversations(uid, page, pageSize)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, apimodel.SuccessResponse(gin.H{
+		"items":     items,
+		"total":     total,
+		"page":      page,
+		"page_size": pageSize,
+	}))
+}
+
 // MarkRead 标记消息为已读（将对方->我，ID <= before_id 的未读置已读）
 func (h *Hub) MarkRead(c *gin.Context) {
 	uid, err := getAppUserID(c)

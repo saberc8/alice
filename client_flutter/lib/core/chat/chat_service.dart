@@ -84,4 +84,21 @@ class ChatService {
     }
     throw Exception('获取历史失败: ${res.statusCode}');
   }
+
+  /// 获取最近会话列表
+  Future<Map<String, dynamic>> getConversations({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final res = await _dio.get(
+      '/api/v1/app/chat/conversations',
+      queryParameters: {'page': page, 'page_size': pageSize},
+    );
+    if (res.statusCode == 200) {
+      final data = res.data is Map ? res.data['data'] : null;
+      if (data is Map<String, dynamic>) return data;
+      throw Exception('响应格式错误');
+    }
+    throw Exception('获取会话列表失败: ${res.statusCode}');
+  }
 }
