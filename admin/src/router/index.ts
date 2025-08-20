@@ -83,6 +83,19 @@ const routes: RouteRecordRaw[] = [
 				component: Redirect,
 				meta: { requiresAuth: true, title: '首页' },
 			},
+		// 本地调试静态路由：对象存储浏览
+		{
+			path: 'minio',
+			name: 'MinioLocal',
+			component: () => import('@/views/minio/BucketBrowser.vue'),
+			meta: { requiresAuth: true, title: '对象存储(卡片)' },
+		},
+		{
+			path: 'minio-table',
+			name: 'MinioTable',
+			component: () => import('@/views/minio/MinioManager.vue'),
+			meta: { requiresAuth: true, title: '对象存储(表格)' },
+		},
 		],
 	},
 	{ path: '/:pathMatch(.*)*', redirect: '/' },

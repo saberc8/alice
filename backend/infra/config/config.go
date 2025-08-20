@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -13,6 +14,7 @@ type Config struct {
 	Database DatabaseConfig `yaml:"database"`
 	JWT      JWTConfig      `yaml:"jwt"`
 	Log      LogConfig      `yaml:"log"`
+	Minio    MinioConfig    `yaml:"minio"`
 }
 
 // ServerConfig 服务器配置
@@ -42,6 +44,20 @@ type JWTConfig struct {
 // LogConfig 日志配置
 type LogConfig struct {
 	Level string `yaml:"level"`
+}
+
+// MinioConfig MinIO 对象存储配置
+type MinioConfig struct {
+	Endpoint  string `yaml:"endpoint"`
+	AccessKey string `yaml:"access-key"`
+	SecretKey string `yaml:"secret-key"`
+	UseSSL    bool   `yaml:"use-ssl"`
+	// BaseURL 用于返回给前端访问的对象基础 URL（可配置自定义域名，留空则通过 endpoint 组合）
+	BaseURL string `yaml:"base-url"`
+	// 上传限制
+	MaxFileSizeMB   int      `yaml:"max-file-size-mb"`
+	AllowedMIMEs    []string `yaml:"allowed-mime-types"`
+	EnableVirusScan bool     `yaml:"enable-virus-scan"`
 }
 
 // Load 加载配置
@@ -79,6 +95,22 @@ func Load() *Config {
 		Log: LogConfig{
 			Level: getEnv("LOG_LEVEL", "info"),
 		},
+		Minio: MinioConfig{
+			Endpoint:      getEnv("MINIO_ENDPOINT", "localhost:9000"),
+			AccessKey:     getEnv("MINIO_ACCESS_KEY", ""),
+			SecretKey:     getEnv("MINIO_SECRET_KEY", ""),
+			UseSSL:        getEnv("MINIO_USE_SSL", "false") == "true",
+			BaseURL:       getEnv("MINIO_BASE_URL", ""),
+			MaxFileSizeMB: getEnvAsInt("MINIO_MAX_FILE_SIZE_MB", 20),
+			// AllowedMIMEs 可在 YAML 配置；用 env 配置时用逗号分隔
+			AllowedMIMEs: func() []string {
+				if v := getEnv("MINIO_ALLOWED_MIME_TYPES", ""); v != "" {
+					return splitAndTrim(v)
+				}
+				return nil
+			}(),
+			EnableVirusScan: getEnv("MINIO_ENABLE_VIRUS_SCAN", "false") == "true",
+		},
 	}
 	applyDefaults(cfg)
 	return cfg
@@ -105,6 +137,29 @@ func applyDefaults(c *Config) {
 	if c.Log.Level == "" {
 		c.Log.Level = "info"
 	}
+	// MinIO 默认值
+	if c.Minio.Endpoint == "" {
+		c.Minio.Endpoint = "localhost:9000"
+	}
+	if c.Minio.MaxFileSizeMB == 0 {
+		c.Minio.MaxFileSizeMB = 20
+	}
+	if len(c.Minio.AllowedMIMEs) == 0 { // 默认允许常见图片/文本
+		c.Minio.AllowedMIMEs = []string{"image/png", "image/jpeg", "image/gif", "text/plain", "application/pdf"}
+	}
+}
+
+// splitAndTrim 按逗号拆分并去空白
+func splitAndTrim(s string) []string {
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 // getEnv 获取环境变量，如果不存在则返回默认值

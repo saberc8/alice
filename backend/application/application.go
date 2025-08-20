@@ -12,6 +12,7 @@ import (
 	"alice/infra/database"
 	"alice/infra/repository"
 	chatrepo "alice/infra/repository/chat"
+	"alice/infra/storage"
 	"alice/pkg/logger"
 )
 
@@ -28,6 +29,9 @@ var (
 	RoleSvc       rbacService.RoleService
 	PermissionSvc rbacService.PermissionService
 	MenuSvc       rbacService.MenuService
+
+	// 对象存储
+	ObjectStore storage.ObjectStorage
 )
 
 // Init 初始化应用
@@ -59,6 +63,18 @@ func Init(ctx context.Context, cfg *config.Config) error {
 	RoleSvc = rbacService.NewRoleService(roleRepo)
 	PermissionSvc = rbacService.NewPermissionService(permissionRepo)
 	MenuSvc = rbacService.NewMenuService(menuRepo, permissionRepo)
+
+	// 初始化对象存储（MinIO）
+	if cfg.Minio.Endpoint != "" {
+		minioCli, err := storage.NewMinio(cfg.Minio)
+		if err != nil {
+			logger.Errorf("init minio failed: %v", err)
+		} else {
+			ObjectStore = minioCli
+			_ = minioCli.HealthCheck(ctx)
+			logger.Info("MinIO storage initialized")
+		}
+	}
 
 	logger.Info("Application initialized successfully")
 	return nil

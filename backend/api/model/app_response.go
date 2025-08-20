@@ -6,6 +6,7 @@ type AppUserInfo struct {
 	Email    string `json:"email"`
 	Nickname string `json:"nickname"`
 	Avatar   string `json:"avatar"`
+	Gender   string `json:"gender"`
 	Bio      string `json:"bio"`
 }
 
@@ -29,6 +30,7 @@ type FriendDetail struct {
 	Email    string `json:"email"`
 	Nickname string `json:"nickname"`
 	Avatar   string `json:"avatar"`
+	Gender   string `json:"gender"`
 	Bio      string `json:"bio"`
 }
 

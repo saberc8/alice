@@ -159,6 +159,12 @@ definitions:
       bio:
         maxLength: 160
         type: string
+      gender:
+        enum:
+        - male
+        - female
+        - other
+        type: string
       nickname:
         maxLength: 30
         type: string
@@ -170,6 +176,8 @@ definitions:
       bio:
         type: string
       email:
+        type: string
+      gender:
         type: string
       id:
         type: integer
@@ -207,6 +215,8 @@ definitions:
       bio:
         type: string
       email:
+        type: string
+      gender:
         type: string
       id:
         type: integer
@@ -719,6 +729,41 @@ paths:
       security:
       - BearerAuth: []
       summary: App 更新资料
+      tags:
+      - App
+  /app/profile/avatar:
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: 头像文件
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.AppUserInfo'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: App 上传头像并更新资料
       tags:
       - App
   /app/register:
@@ -1575,6 +1620,206 @@ paths:
       summary: 为角色分配权限
       tags:
       - RolePermissions
+  /storage/buckets:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  items:
+                    type: string
+                  type: array
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 列举 Buckets
+      tags:
+      - Storage
+  /storage/buckets/{bucket}:
+    delete:
+      parameters:
+      - description: Bucket 名称
+        in: path
+        name: bucket
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 删除存储桶
+      tags:
+      - Storage
+    post:
+      parameters:
+      - description: Bucket 名称
+        in: path
+        name: bucket
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 创建存储桶
+      tags:
+      - Storage
+  /storage/buckets/{bucket}/objects:
+    get:
+      parameters:
+      - description: Bucket 名称
+        in: path
+        name: bucket
+        required: true
+        type: string
+      - description: 前缀
+        in: query
+        name: prefix
+        type: string
+      - description: 是否递归
+        in: query
+        name: recursive
+        type: boolean
+      - description: 返回数量限制
+        in: query
+        name: limit
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  items:
+                    type: string
+                  type: array
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 列举对象
+      tags:
+      - Storage
+    post:
+      parameters:
+      - description: Bucket 名称
+        in: path
+        name: bucket
+        required: true
+        type: string
+      - description: 要上传的文件
+        in: formData
+        name: file
+        required: true
+        type: file
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  additionalProperties:
+                    type: string
+                  type: object
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 上传对象
+      tags:
+      - Storage
+  /storage/buckets/{bucket}/objects/{object}:
+    delete:
+      parameters:
+      - description: Bucket 名称
+        in: path
+        name: bucket
+        required: true
+        type: string
+      - description: 对象名
+        in: path
+        name: object
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 删除对象
+      tags:
+      - Storage
+  /storage/buckets/{bucket}/objects/{object}/url:
+    get:
+      parameters:
+      - description: Bucket 名称
+        in: path
+        name: bucket
+        required: true
+        type: string
+      - description: 对象名
+        in: path
+        name: object
+        required: true
+        type: string
+      - description: 有效期秒 (默认3600)
+        in: query
+        name: expiry
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  additionalProperties:
+                    type: string
+                  type: object
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 获取对象预签名 URL
+      tags:
+      - Storage
+  /storage/buckets/{bucket}/public:
+    post:
+      parameters:
+      - description: Bucket 名称
+        in: path
+        name: bucket
+        required: true
+        type: string
+      - description: true=公开读 false=取消公开
+        in: query
+        name: public
+        required: true
+        type: boolean
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 设置 Bucket 公共读
+      tags:
+      - Storage
   /users:
     get:
       parameters:

@@ -130,3 +130,19 @@ alice/
 第四步：实现前端的动态菜单渲染
 第五步：实现第一个user的table的增删改查
 第六步：批量实现菜单，角色，权限管理
+
+方法一：每次获取最新的URL
+这种方法相对比较安全，但就是前端会麻烦一点。
+
+方法二：设置永久访问[1]
+前提是需要安装一下mc客户端，见官网教程：
+
+MinIO Client — MinIO Object Storage for Linux
+​min.io/docs/minio/linux/reference/minio-mc.html?ref=docs
+以下通过mc设置bucket策略为download，因为控制台只能设置private（默认）、public和custom
+
+# 查看local下的bucket
+mc ls local
+
+# 设置策略为download
+mc policy set download local/smart-water-plant

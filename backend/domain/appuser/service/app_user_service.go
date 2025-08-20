@@ -24,7 +24,7 @@ type AppUserService interface {
 	Register(email, password, nickname string) (*appentity.AppUser, error)
 	Login(email, password string) (string, error)
 	GetByID(id uint) (*appentity.AppUser, error)
-	UpdateProfile(id uint, nickname, avatar, bio string) (*appentity.AppUser, error)
+	UpdateProfile(id uint, nickname, avatar, gender, bio string) (*appentity.AppUser, error)
 }
 
 type appUserServiceImpl struct {
@@ -74,7 +74,7 @@ func (s *appUserServiceImpl) GetByID(id uint) (*appentity.AppUser, error) {
 	return u, nil
 }
 
-func (s *appUserServiceImpl) UpdateProfile(id uint, nickname, avatar, bio string) (*appentity.AppUser, error) {
+func (s *appUserServiceImpl) UpdateProfile(id uint, nickname, avatar, gender, bio string) (*appentity.AppUser, error) {
 	u, err := s.repo.GetByID(id)
 	if err != nil || u == nil {
 		return nil, ErrAppUserNotFound
@@ -84,6 +84,12 @@ func (s *appUserServiceImpl) UpdateProfile(id uint, nickname, avatar, bio string
 	}
 	if avatar != "" {
 		u.Avatar = avatar
+	}
+	if gender != "" { // 简单校验：限制枚举
+		g := strings.ToLower(gender)
+		if g == "male" || g == "female" || g == "other" { // 允许值
+			u.Gender = g
+		}
 	}
 	if bio != "" {
 		u.Bio = bio

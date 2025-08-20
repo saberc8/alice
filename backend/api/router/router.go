@@ -19,6 +19,7 @@ type Router struct {
 	permissionHandler *handler.PermissionHandler
 	menuHandler       *handler.MenuHandler
 	chatHub           *chathdl.Hub
+	storageHandler    *handler.StorageHandler
 }
 
 func NewRouter(
@@ -30,6 +31,7 @@ func NewRouter(
 ) *Router {
 	// 初始化聊天 Hub（基于应用层 ChatSvc）
 	hub := chathdl.NewHub(application.ChatSvc)
+	storageHandler := handler.NewStorageHandler()
 	return &Router{
 		userHandler:       userHandler,
 		appUserHandler:    appUserHandler,
@@ -37,6 +39,7 @@ func NewRouter(
 		permissionHandler: permissionHandler,
 		menuHandler:       menuHandler,
 		chatHub:           hub,
+		storageHandler:    storageHandler,
 	}
 }
 
@@ -83,6 +86,22 @@ func (r *Router) SetupRoutes() *gin.Engine {
 			users.DELETE("/:user_id", middleware.RequirePerm(application.PermissionSvc, "system:user:delete"), r.userHandler.DeleteUser)
 		}
 
+		// 存储相关路由
+		storage := protected.Group("/storage")
+		{
+			buckets := storage.Group("/buckets")
+			{
+				buckets.GET("", r.storageHandler.ListBuckets)
+				buckets.POST(":bucket", r.storageHandler.CreateBucket)
+				buckets.DELETE(":bucket", r.storageHandler.DeleteBucket)
+				buckets.GET(":bucket/objects", r.storageHandler.ListObjects)
+				buckets.POST(":bucket/objects", r.storageHandler.UploadObject)
+				buckets.DELETE(":bucket/objects/:object", r.storageHandler.DeleteObject)
+				buckets.GET(":bucket/objects/:object/url", r.storageHandler.GetObjectPresigned)
+				buckets.POST(":bucket/public", r.storageHandler.SetBucketPublic)
+			}
+		}
+
 	}
 
 	// ===== 移动端 App 路由（独立于后台鉴权） =====
@@ -96,6 +115,7 @@ func (r *Router) SetupRoutes() *gin.Engine {
 		{
 			appProtected.GET("/profile", r.appUserHandler.AppProfile)
 			appProtected.PUT("/profile", r.appUserHandler.AppUpdateProfile)
+			appProtected.POST("/profile/avatar", r.appUserHandler.AppUploadAvatar)
 			appProtected.POST("/friends/request", r.appUserHandler.RequestFriend)
 			appProtected.GET("/friends", r.appUserHandler.ListFriends)
 			appProtected.GET("/friends/requests", r.appUserHandler.ListPendingRequests)

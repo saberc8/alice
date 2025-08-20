@@ -1,14 +1,20 @@
 package handler
 
 import (
+	"io"
 	"net/http"
+	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
 	apimodel "alice/api/model"
+	"alice/application"
 	friendsvc "alice/domain/appfriend/service"
 	appsvc "alice/domain/appuser/service"
+	"alice/infra/config"
 	"alice/pkg/logger"
 )
 
@@ -47,7 +53,7 @@ func (h *AppUserHandler) AppRegister(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, apimodel.ErrorResponse(apimodel.CodeInternalError, "failed to issue token"))
 		return
 	}
-	c.JSON(http.StatusOK, apimodel.SuccessResponse(apimodel.AppAuthResponse{User: apimodel.AppUserInfo{ID: u.ID, Email: u.Email, Nickname: u.Nickname, Avatar: u.Avatar, Bio: u.Bio}, Token: token}))
+	c.JSON(http.StatusOK, apimodel.SuccessResponse(apimodel.AppAuthResponse{User: apimodel.AppUserInfo{ID: u.ID, Email: u.Email, Nickname: u.Nickname, Avatar: u.Avatar, Gender: u.Gender, Bio: u.Bio}, Token: token}))
 }
 
 // AppLogin 移动端登录
@@ -95,7 +101,7 @@ func (h *AppUserHandler) AppProfile(c *gin.Context) {
 		c.JSON(http.StatusNotFound, apimodel.ErrorResponse(apimodel.CodeNotFound, apimodel.MsgUserNotFound))
 		return
 	}
-	c.JSON(http.StatusOK, apimodel.SuccessResponse(apimodel.AppUserInfo{ID: u.ID, Email: u.Email, Nickname: u.Nickname, Avatar: u.Avatar, Bio: u.Bio}))
+	c.JSON(http.StatusOK, apimodel.SuccessResponse(apimodel.AppUserInfo{ID: u.ID, Email: u.Email, Nickname: u.Nickname, Avatar: u.Avatar, Gender: u.Gender, Bio: u.Bio}))
 }
 
 // AppUpdateProfile 更新移动端用户资料
@@ -121,12 +127,12 @@ func (h *AppUserHandler) AppUpdateProfile(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, apimodel.MsgInvalidRequest))
 		return
 	}
-	u, err := h.svc.UpdateProfile(uid, req.Nickname, req.Avatar, req.Bio)
+	u, err := h.svc.UpdateProfile(uid, req.Nickname, req.Avatar, req.Gender, req.Bio)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, err.Error()))
 		return
 	}
-	c.JSON(http.StatusOK, apimodel.SuccessResponse(apimodel.AppUserInfo{ID: u.ID, Email: u.Email, Nickname: u.Nickname, Avatar: u.Avatar, Bio: u.Bio}))
+	c.JSON(http.StatusOK, apimodel.SuccessResponse(apimodel.AppUserInfo{ID: u.ID, Email: u.Email, Nickname: u.Nickname, Avatar: u.Avatar, Gender: u.Gender, Bio: u.Bio}))
 }
 
 // RequestFriend 发送好友请求（通过对方邮箱）
@@ -196,7 +202,7 @@ func (h *AppUserHandler) ListFriends(c *gin.Context) {
 	}
 	items := make([]apimodel.FriendDetail, 0, len(users))
 	for _, u := range users {
-		items = append(items, apimodel.FriendDetail{ID: u.ID, Email: u.Email, Nickname: u.Nickname, Avatar: u.Avatar, Bio: u.Bio})
+		items = append(items, apimodel.FriendDetail{ID: u.ID, Email: u.Email, Nickname: u.Nickname, Avatar: u.Avatar, Gender: u.Gender, Bio: u.Bio})
 	}
 	c.JSON(http.StatusOK, apimodel.SuccessResponse(apimodel.FriendDetailListResponse{Items: items, Total: total, Page: page, PageSize: pageSize}))
 }
@@ -295,4 +301,124 @@ func (h *AppUserHandler) DeclineFriendRequest(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, apimodel.SuccessResponseWithMessage("declined", nil))
+}
+
+// AppUploadAvatar 上传并更新头像 (单步：上传文件到对象存储并立即更新用户头像字段)
+// @Summary App 上传头像并更新资料
+// @Tags App
+// @Security BearerAuth
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "头像文件"
+// @Success 200 {object} model.APIResponse{data=model.AppUserInfo}
+// @Failure 400 {object} model.APIResponse
+// @Failure 401 {object} model.APIResponse
+// @Router /app/profile/avatar [post]
+func (h *AppUserHandler) AppUploadAvatar(c *gin.Context) {
+	// 鉴权
+	idAny, ok := c.Get("app_user_id")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, apimodel.ErrorResponse(apimodel.CodeUnauthorized, apimodel.MsgUnauthorized))
+		return
+	}
+	uid, _ := idAny.(uint)
+
+	if application.ObjectStore == nil {
+		c.JSON(http.StatusInternalServerError, apimodel.ErrorResponse(apimodel.CodeInternalError, "storage not initialized"))
+		return
+	}
+
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, "missing file"))
+		return
+	}
+	defer file.Close()
+	data, err := io.ReadAll(file)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, apimodel.ErrorResponse(apimodel.CodeInternalError, "read file failed"))
+		return
+	}
+
+	cfg := config.Load()
+	maxBytes := int64(cfg.Minio.MaxFileSizeMB) * 1024 * 1024
+	if maxBytes > 0 && int64(len(data)) > maxBytes { // 复用全局文件大小限制
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, "file too large"))
+		return
+	}
+
+	contentType := header.Header.Get("Content-Type")
+	if contentType == "" {
+		// 简单推断：根据扩展名
+		ext := strings.ToLower(filepath.Ext(header.Filename))
+		switch ext {
+		case ".jpg", ".jpeg":
+			contentType = "image/jpeg"
+		case ".png":
+			contentType = "image/png"
+		case ".gif":
+			contentType = "image/gif"
+		default:
+			contentType = "application/octet-stream"
+		}
+	}
+
+	// 仅允许图片类型
+	if !strings.HasPrefix(strings.ToLower(contentType), "image/") {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, "only image allowed"))
+		return
+	}
+	// 若配置了 AllowedMIMEs 进一步校验
+	if !appMimeAllowed(cfg.Minio.AllowedMIMEs, contentType) {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, "mime not allowed"))
+		return
+	}
+
+	// 生成对象名：avatar-{uid}-{timestamp}{ext}
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+	if len(ext) > 10 { // 防止异常过长
+		ext = ""
+	}
+	objectName := "avatar-" + strconv.FormatUint(uint64(uid), 10) + "-" + strconv.FormatInt(time.Now().Unix(), 10) + ext
+	bucket := "app-avatars" // 固定 bucket，必要时可放配置
+
+	url, err := application.ObjectStore.PutObject(c.Request.Context(), bucket, objectName, data, contentType)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, err.Error()))
+		return
+	}
+
+	// 更新用户头像
+	u, err := h.svc.UpdateProfile(uid, "", url, "", "")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, apimodel.ErrorResponse(apimodel.CodeInternalError, "update profile failed"))
+		return
+	}
+	c.JSON(http.StatusOK, apimodel.SuccessResponse(apimodel.AppUserInfo{ID: u.ID, Email: u.Email, Nickname: u.Nickname, Avatar: u.Avatar, Gender: u.Gender, Bio: u.Bio}))
+}
+
+// appMimeAllowed 与存储 handler 类似：支持 * / 前缀 / 精确；为空表示不限制
+func appMimeAllowed(allowed []string, ct string) bool {
+	if len(allowed) == 0 {
+		return true
+	}
+	ct = strings.ToLower(ct)
+	for _, a := range allowed {
+		a = strings.ToLower(strings.TrimSpace(a))
+		if a == "" {
+			continue
+		}
+		if a == "*" {
+			return true
+		}
+		if strings.HasSuffix(a, "/*") {
+			prefix := strings.TrimSuffix(a, "/*") + "/"
+			if strings.HasPrefix(ct, prefix) {
+				return true
+			}
+		} else if a == ct {
+			return true
+		}
+	}
+	return false
 }

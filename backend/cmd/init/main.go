@@ -215,6 +215,14 @@ func initPermissions(ctx context.Context, db *gorm.DB, permissionService rbacSer
 		{Name: "菜单-创建", Code: "system:menu:create", MenuID: getMenuID("system:menus"), Resource: "menu", Action: "create", Status: entity.PermissionStatusActive},
 		{Name: "菜单-更新", Code: "system:menu:update", MenuID: getMenuID("system:menus"), Resource: "menu", Action: "update", Status: entity.PermissionStatusActive},
 		{Name: "菜单-删除", Code: "system:menu:delete", MenuID: getMenuID("system:menus"), Resource: "menu", Action: "delete", Status: entity.PermissionStatusActive},
+
+		// 文件管理 (system:storage)
+		{Name: "存储-Bucket列表", Code: "system:storage:bucket:list", MenuID: getMenuID("system:storage"), Resource: "storage_bucket", Action: "list", Status: entity.PermissionStatusActive},
+		{Name: "存储-Bucket创建", Code: "system:storage:bucket:create", MenuID: getMenuID("system:storage"), Resource: "storage_bucket", Action: "create", Status: entity.PermissionStatusActive},
+		{Name: "存储-Bucket删除", Code: "system:storage:bucket:delete", MenuID: getMenuID("system:storage"), Resource: "storage_bucket", Action: "delete", Status: entity.PermissionStatusActive},
+		{Name: "存储-对象列表", Code: "system:storage:object:list", MenuID: getMenuID("system:storage"), Resource: "storage_object", Action: "list", Status: entity.PermissionStatusActive},
+		{Name: "存储-对象上传", Code: "system:storage:object:upload", MenuID: getMenuID("system:storage"), Resource: "storage_object", Action: "upload", Status: entity.PermissionStatusActive},
+		{Name: "存储-对象删除", Code: "system:storage:object:delete", MenuID: getMenuID("system:storage"), Resource: "storage_object", Action: "delete", Status: entity.PermissionStatusActive},
 	}
 
 	for _, req := range permissions {
@@ -339,6 +347,21 @@ func initMenus(ctx context.Context, db *gorm.DB, menuService rbacService.MenuSer
 	})
 	if err != nil {
 		return fmt.Errorf("创建权限管理失败: %w", err)
+	}
+
+	// 文件管理（MinIO）
+	_, err = menuService.CreateMenu(ctx, &rbacService.CreateMenuRequest{
+		ParentID: &systemGroup.ID,
+		Name:     "文件管理",
+		Code:     "system:storage",
+		Path:     stringPtr("/system/storage"),
+		Type:     entity.MenuTypeMenu,
+		Order:    5,
+		Status:   entity.MenuStatusActive,
+		Meta:     entity.MenuMeta{Component: stringPtr("views/minio/MinioManager")},
+	})
+	if err != nil {
+		return fmt.Errorf("创建文件管理失败: %w", err)
 	}
 
 	fmt.Println("初始化菜单完成(精简版)")

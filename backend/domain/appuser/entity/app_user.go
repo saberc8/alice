@@ -19,6 +19,7 @@ type AppUser struct {
 	PasswordHash string        `json:"-" gorm:"not null"`
 	Nickname     string        `json:"nickname" gorm:"default:''"`
 	Avatar       string        `json:"avatar" gorm:"default:''"`
+	Gender       string        `json:"gender" gorm:"type:varchar(10);default:''"` // male / female / other （可枚举）
 	Bio          string        `json:"bio" gorm:"default:''"`
 	Status       AppUserStatus `json:"status" gorm:"not null;default:'active'"`
 	CreatedAt    time.Time     `json:"created_at"`

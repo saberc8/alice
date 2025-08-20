@@ -17,6 +17,7 @@ type AppLoginRequest struct {
 type AppUpdateProfileRequest struct {
 	Nickname string `json:"nickname" binding:"omitempty,max=30"`
 	Avatar   string `json:"avatar" binding:"omitempty,url"`
+	Gender   string `json:"gender" binding:"omitempty,oneof=male female other"`
 	Bio      string `json:"bio" binding:"omitempty,max=160"`
 }
 
