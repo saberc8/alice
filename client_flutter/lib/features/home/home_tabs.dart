@@ -7,6 +7,7 @@ import 'package:client_flutter/ui/we_tabbar.dart';
 import 'package:client_flutter/ui/we_appbar.dart';
 import 'package:client_flutter/ui/we_cell.dart';
 import 'package:client_flutter/ui/we_colors.dart';
+import 'package:client_flutter/features/profile/edit_profile_page.dart';
 
 class HomeTabs extends StatefulWidget {
   const HomeTabs({super.key, required this.onLogout});
@@ -608,24 +609,44 @@ class _ProfilePageState extends State<_ProfilePage> {
                   const SizedBox(height: 12),
                   Expanded(
                     child: ListView(
-                      children: const [
-                        WeCell(
+                      children: [
+                        const WeCell(
                           title: '支付',
                           leading: Icon(
                             Icons.payment_outlined,
                             color: Colors.black87,
                           ),
                         ),
-                        Divider(height: 1, color: WeColors.divider),
-                        WeCell(
+                        const Divider(height: 1, color: WeColors.divider),
+                        const WeCell(
                           title: '收藏',
                           leading: Icon(
                             Icons.star_outline,
                             color: Colors.black87,
                           ),
                         ),
-                        Divider(height: 1, color: WeColors.divider),
+                        const Divider(height: 1, color: WeColors.divider),
                         WeCell(
+                          title: '编辑资料',
+                          leading: const Icon(
+                            Icons.edit_outlined,
+                            color: Colors.black87,
+                          ),
+                          onTap: () async {
+                            if (_profile == null) return;
+                            final updated = await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder:
+                                    (_) => EditProfilePage(initial: _profile!),
+                              ),
+                            );
+                            if (updated is Map<String, dynamic>) {
+                              setState(() => _profile = updated);
+                            }
+                          },
+                        ),
+                        const Divider(height: 1, color: WeColors.divider),
+                        const WeCell(
                           title: '设置',
                           leading: Icon(
                             Icons.settings_outlined,
