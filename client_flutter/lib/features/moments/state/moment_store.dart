@@ -4,7 +4,8 @@ import '../data/moment_models.dart';
 
 class MomentStore extends ChangeNotifier {
   final MomentApi api;
-  MomentStore({MomentApi? api}) : api = api ?? MomentApi();
+  final int? userId; // 若提供则按用户过滤
+  MomentStore({MomentApi? api, this.userId}) : api = api ?? MomentApi();
 
   final List<MomentItem> _moments = [];
   bool _isLoading = false;
@@ -28,7 +29,10 @@ class MomentStore extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final res = await api.listAll(page: _page, pageSize: _pageSize);
+      final res =
+          userId == null
+              ? await api.listAll(page: _page, pageSize: _pageSize)
+              : await api.listByUser(userId!, page: _page, pageSize: _pageSize);
       if (_page == 1) _moments.clear();
       _moments.addAll(res.items);
       _hasMore = _moments.length < res.total;

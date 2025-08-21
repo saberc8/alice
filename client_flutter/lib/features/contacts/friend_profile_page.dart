@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:client_flutter/features/chat/chat_page.dart';
+import 'package:client_flutter/features/moments/ui/user_moment_list_page.dart';
 
 class FriendProfilePage extends StatelessWidget {
   const FriendProfilePage({super.key, required this.user});
@@ -57,13 +58,32 @@ class FriendProfilePage extends StatelessWidget {
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: FilledButton(
-            onPressed: () {
-              Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => ChatPage(peer: user)));
-            },
-            child: const Text('发消息'),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => UserMomentListPage(user: user),
+                      ),
+                    );
+                  },
+                  child: const Text('朋友圈'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => ChatPage(peer: user)),
+                    );
+                  },
+                  child: const Text('发消息'),
+                ),
+              ),
+            ],
           ),
         ),
       ),

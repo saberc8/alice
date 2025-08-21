@@ -281,6 +281,11 @@ class _ContactsPageState extends State<_ContactsPage> {
         title: '通讯录',
         actions: [
           IconButton(
+            onPressed: _load,
+            icon: const Icon(Icons.refresh),
+            tooltip: '刷新',
+          ),
+          IconButton(
             onPressed:
                 () => Navigator.of(context).push(
                   MaterialPageRoute(
