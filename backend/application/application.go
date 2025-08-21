@@ -6,6 +6,7 @@ import (
 	appfriendservice "alice/domain/appfriend/service"
 	appuserservice "alice/domain/appuser/service"
 	chatservice "alice/domain/chat/service"
+	momentservice "alice/domain/moment/service"
 	rbacService "alice/domain/rbac/service"
 	"alice/domain/user/service"
 	"alice/infra/config"
@@ -24,6 +25,7 @@ var (
 	AppUserSvc appuserservice.AppUserService
 	FriendSvc  appfriendservice.FriendService
 	ChatSvc    chatservice.ChatService
+	MomentSvc  momentservice.MomentService
 
 	// RBAC 服务实例
 	RoleSvc       rbacService.RoleService
@@ -46,6 +48,7 @@ func Init(ctx context.Context, cfg *config.Config) error {
 	userRepo := repository.NewUserRepository(db)
 	appUserRepo := repository.NewAppUserRepository(db)
 	friendRepo := repository.NewFriendRepository(db)
+	momentRepo := repository.NewMomentRepository(db)
 	msgRepo := chatrepo.NewMessageRepository(db)
 
 	// 初始化RBAC仓储
@@ -58,6 +61,7 @@ func Init(ctx context.Context, cfg *config.Config) error {
 	AppUserSvc = appuserservice.NewAppUserService(appUserRepo)
 	FriendSvc = appfriendservice.NewFriendService(appUserRepo, friendRepo)
 	ChatSvc = chatservice.NewChatService(msgRepo, friendRepo)
+	MomentSvc = momentservice.NewMomentService(momentRepo)
 
 	// 初始化RBAC服务
 	RoleSvc = rbacService.NewRoleService(roleRepo)

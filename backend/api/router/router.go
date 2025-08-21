@@ -20,6 +20,7 @@ type Router struct {
 	menuHandler       *handler.MenuHandler
 	chatHub           *chathdl.Hub
 	storageHandler    *handler.StorageHandler
+	momentHandler     *handler.MomentHandler
 }
 
 func NewRouter(
@@ -32,6 +33,7 @@ func NewRouter(
 	// 初始化聊天 Hub（基于应用层 ChatSvc）
 	hub := chathdl.NewHub(application.ChatSvc)
 	storageHandler := handler.NewStorageHandler()
+	momentHandler := handler.NewMomentHandler(application.MomentSvc)
 	return &Router{
 		userHandler:       userHandler,
 		appUserHandler:    appUserHandler,
@@ -40,6 +42,7 @@ func NewRouter(
 		menuHandler:       menuHandler,
 		chatHub:           hub,
 		storageHandler:    storageHandler,
+		momentHandler:     momentHandler,
 	}
 }
 
@@ -121,6 +124,13 @@ func (r *Router) SetupRoutes() *gin.Engine {
 			appProtected.GET("/friends/requests", r.appUserHandler.ListPendingRequests)
 			appProtected.POST("/friends/requests/:request_id/accept", r.appUserHandler.AcceptFriendRequest)
 			appProtected.POST("/friends/requests/:request_id/decline", r.appUserHandler.DeclineFriendRequest)
+
+			// Moments
+			appProtected.POST("/moments", r.momentHandler.PostMoment)
+			appProtected.GET("/moments", r.momentHandler.ListMoments)
+			appProtected.DELETE("/moments/:moment_id", r.momentHandler.DeleteMoment)
+			appProtected.POST("/moments/images", r.momentHandler.UploadImage)
+			appProtected.GET("/users/:user_id/moments", r.momentHandler.ListUserMoments)
 
 			// Chat routes
 			chat := appProtected.Group("/chat")

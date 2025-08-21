@@ -8,6 +8,7 @@ import 'package:client_flutter/ui/we_appbar.dart';
 import 'package:client_flutter/ui/we_cell.dart';
 import 'package:client_flutter/ui/we_colors.dart';
 import 'package:client_flutter/features/profile/edit_profile_page.dart';
+import 'package:client_flutter/features/moments/ui/moment_list_page.dart';
 
 class HomeTabs extends StatefulWidget {
   const HomeTabs({super.key, required this.onLogout});
@@ -489,9 +490,27 @@ class _DiscoverPage extends StatelessWidget {
   const _DiscoverPage();
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      appBar: WeAppBar(title: '发现'),
-      body: Center(child: Text('发现内容占位')),
+    return Scaffold(
+      appBar: const WeAppBar(title: '发现'),
+      body: ListView(
+        children: [
+          const SizedBox(height: 8),
+          WeCell(
+            leading: const Icon(
+              Icons.dynamic_feed_outlined,
+              color: Colors.blue,
+            ),
+            title: '朋友圈',
+            subtitle: '查看与发布动态',
+            onTap: () {
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const MomentListPage()));
+            },
+          ),
+          const Divider(height: 1, color: WeColors.divider),
+        ],
+      ),
     );
   }
 }

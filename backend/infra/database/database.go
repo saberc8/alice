@@ -9,6 +9,7 @@ import (
 	friendEntity "alice/domain/appfriend/entity"
 	appEntity "alice/domain/appuser/entity"
 	chatEntity "alice/domain/chat/entity"
+	momentEntity "alice/domain/moment/entity"
 	rbacEntity "alice/domain/rbac/entity"
 	"alice/domain/user/entity"
 	"alice/infra/config"
@@ -44,6 +45,9 @@ func autoMigrate(db *gorm.DB) error {
 		&appEntity.AppUser{},
 		&friendEntity.FriendRelation{},
 		&friendEntity.FriendRequest{},
+
+		// Moments
+		&momentEntity.Moment{},
 
 		// Chat
 		&chatEntity.Message{},

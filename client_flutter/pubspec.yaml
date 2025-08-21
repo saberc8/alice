@@ -39,6 +39,8 @@ dependencies:
   web_socket_channel: ^2.4.0
   image_picker: ^1.1.2
   permission_handler: ^11.3.1
+  equatable: ^2.0.5
+  provider: ^6.1.2
 
 dev_dependencies:
   flutter_test:

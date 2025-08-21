@@ -1,0 +1,55 @@
+import 'package:flutter/foundation.dart';
+import '../data/moment_api.dart';
+import '../data/moment_models.dart';
+
+class MomentStore extends ChangeNotifier {
+  final MomentApi api;
+  MomentStore({MomentApi? api}) : api = api ?? MomentApi();
+
+  final List<MomentItem> _moments = [];
+  bool _isLoading = false;
+  bool _hasMore = true;
+  int _page = 1;
+  final int _pageSize = 20;
+
+  List<MomentItem> get moments => List.unmodifiable(_moments);
+  bool get isLoading => _isLoading;
+  bool get hasMore => _hasMore;
+
+  Future<void> refresh() async {
+    _page = 1;
+    _hasMore = true;
+    _moments.clear();
+    await loadMore();
+  }
+
+  Future<void> loadMore() async {
+    if (_isLoading || !_hasMore) return;
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final res = await api.listAll(page: _page, pageSize: _pageSize);
+      if (_page == 1) _moments.clear();
+      _moments.addAll(res.items);
+      _hasMore = _moments.length < res.total;
+      if (_hasMore) _page += 1;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<MomentItem?> publish(String content, List<String> images) async {
+    final m = await api.publish(content: content, images: images);
+    // 新发布的放到顶部
+    _moments.insert(0, m);
+    notifyListeners();
+    return m;
+  }
+
+  Future<void> delete(int id) async {
+    await api.delete(id);
+    _moments.removeWhere((e) => e.id == id);
+    notifyListeners();
+  }
+}
