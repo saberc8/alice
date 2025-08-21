@@ -22,7 +22,7 @@ minio:
   access-key: "WdVQCeGkKBi1eeIoXVLZ"
   secret-key: "BnAAO63lz1ExyJqqO7bM44e1fTo14Nl6ziRjioBf"
   use-ssl: false
-  base-url: "http://192.168.64.1:9000"  # 可选，若配置则返回文件 URL 使用该域名
+  base-url: "http://172.20.121.32:9000"  # 可选，若配置则返回文件 URL 使用该域名
   max-file-size-mb: 20
   allowed-mime-types:
   # 使用通配符 * 放开所有类型（开发环境）。生产请改成精确或前缀如 image/* 等。

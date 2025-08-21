@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:client_flutter/core/auth/token_store.dart';
-// no flutter foundation needed after unifying base URL
+import 'package:flutter/foundation.dart';
 
 class DioClient {
   static final DioClient _instance = DioClient._internal();
@@ -8,10 +8,18 @@ class DioClient {
   DioClient._internal();
 
   static String _resolveBaseUrl() {
+    // 1. Highest priority: compile-time override
     const env = String.fromEnvironment('API_BASE_URL');
-    if (env.isNotEmpty) return env; // allow --dart-define override
+    if (env.isNotEmpty)
+      return env; // pass with: flutter run --dart-define API_BASE_URL=http://192.168.x.x:8090
+    // 2. Platform defaults
+    // Android 模拟器访问宿主机 localhost 需要用 10.0.2.2
+    // (如果是真机请使用局域网 IP，并通过 --dart-define 传入)
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:8090';
+    }
 
-    // Unified default API base URL for all platforms
+    // 3. 其它平台本地运行直接 localhost
     return 'http://localhost:8090';
   }
 

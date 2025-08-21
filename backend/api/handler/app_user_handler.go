@@ -23,6 +23,38 @@ type AppUserHandler struct {
 	friendSvc friendsvc.FriendService
 }
 
+// fullAvatarURL 根据存储的 avatar 字段（相对路径或完整 URL）补全最终访问 URL。
+// 规则：
+// 1. 为空直接返回 ""
+// 2. 以 http(s) 开头，视为已经是完整 URL，直接返回（兼容旧数据）
+// 3. 其他情况视为相对路径（建议以 / 开头），拼接 MinIO BaseURL（或 endpoint 推导）
+func (h *AppUserHandler) fullAvatarURL(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	lower := strings.ToLower(raw)
+	if strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://") {
+		return raw // 旧数据兼容
+	}
+	cfg := config.Load()
+	base := cfg.Minio.BaseURL
+	if base == "" { // fallback 与存储层逻辑保持一致
+		scheme := "http"
+		if cfg.Minio.UseSSL {
+			scheme = "https"
+		}
+		base = scheme + "://" + cfg.Minio.Endpoint
+	}
+	// 处理 /
+	if strings.HasSuffix(base, "/") {
+		base = strings.TrimRight(base, "/")
+	}
+	if !strings.HasPrefix(raw, "/") {
+		raw = "/" + raw
+	}
+	return base + raw
+}
+
 func NewAppUserHandler(svc appsvc.AppUserService, friendSvc friendsvc.FriendService) *AppUserHandler {
 	return &AppUserHandler{svc: svc, friendSvc: friendSvc}
 }
@@ -53,7 +85,7 @@ func (h *AppUserHandler) AppRegister(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, apimodel.ErrorResponse(apimodel.CodeInternalError, "failed to issue token"))
 		return
 	}
-	c.JSON(http.StatusOK, apimodel.SuccessResponse(apimodel.AppAuthResponse{User: apimodel.AppUserInfo{ID: u.ID, Email: u.Email, Nickname: u.Nickname, Avatar: u.Avatar, Gender: u.Gender, Bio: u.Bio}, Token: token}))
+	c.JSON(http.StatusOK, apimodel.SuccessResponse(apimodel.AppAuthResponse{User: apimodel.AppUserInfo{ID: u.ID, Email: u.Email, Nickname: u.Nickname, Avatar: h.fullAvatarURL(u.Avatar), Gender: u.Gender, Bio: u.Bio}, Token: token}))
 }
 
 // AppLogin 移动端登录
@@ -101,7 +133,7 @@ func (h *AppUserHandler) AppProfile(c *gin.Context) {
 		c.JSON(http.StatusNotFound, apimodel.ErrorResponse(apimodel.CodeNotFound, apimodel.MsgUserNotFound))
 		return
 	}
-	c.JSON(http.StatusOK, apimodel.SuccessResponse(apimodel.AppUserInfo{ID: u.ID, Email: u.Email, Nickname: u.Nickname, Avatar: u.Avatar, Gender: u.Gender, Bio: u.Bio}))
+	c.JSON(http.StatusOK, apimodel.SuccessResponse(apimodel.AppUserInfo{ID: u.ID, Email: u.Email, Nickname: u.Nickname, Avatar: h.fullAvatarURL(u.Avatar), Gender: u.Gender, Bio: u.Bio}))
 }
 
 // AppUpdateProfile 更新移动端用户资料
@@ -132,7 +164,7 @@ func (h *AppUserHandler) AppUpdateProfile(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, err.Error()))
 		return
 	}
-	c.JSON(http.StatusOK, apimodel.SuccessResponse(apimodel.AppUserInfo{ID: u.ID, Email: u.Email, Nickname: u.Nickname, Avatar: u.Avatar, Gender: u.Gender, Bio: u.Bio}))
+	c.JSON(http.StatusOK, apimodel.SuccessResponse(apimodel.AppUserInfo{ID: u.ID, Email: u.Email, Nickname: u.Nickname, Avatar: h.fullAvatarURL(u.Avatar), Gender: u.Gender, Bio: u.Bio}))
 }
 
 // RequestFriend 发送好友请求（通过对方邮箱）
@@ -202,7 +234,7 @@ func (h *AppUserHandler) ListFriends(c *gin.Context) {
 	}
 	items := make([]apimodel.FriendDetail, 0, len(users))
 	for _, u := range users {
-		items = append(items, apimodel.FriendDetail{ID: u.ID, Email: u.Email, Nickname: u.Nickname, Avatar: u.Avatar, Gender: u.Gender, Bio: u.Bio})
+		items = append(items, apimodel.FriendDetail{ID: u.ID, Email: u.Email, Nickname: u.Nickname, Avatar: h.fullAvatarURL(u.Avatar), Gender: u.Gender, Bio: u.Bio})
 	}
 	c.JSON(http.StatusOK, apimodel.SuccessResponse(apimodel.FriendDetailListResponse{Items: items, Total: total, Page: page, PageSize: pageSize}))
 }
@@ -382,19 +414,21 @@ func (h *AppUserHandler) AppUploadAvatar(c *gin.Context) {
 	objectName := "avatar-" + strconv.FormatUint(uint64(uid), 10) + "-" + strconv.FormatInt(time.Now().Unix(), 10) + ext
 	bucket := "app-avatars" // 固定 bucket，必要时可放配置
 
-	url, err := application.ObjectStore.PutObject(c.Request.Context(), bucket, objectName, data, contentType)
+	_, err = application.ObjectStore.PutObject(c.Request.Context(), bucket, objectName, data, contentType)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, err.Error()))
 		return
 	}
 
 	// 更新用户头像
-	u, err := h.svc.UpdateProfile(uid, "", url, "", "")
+	// 数据库存储相对路径：/bucket/object
+	relativePath := "/" + bucket + "/" + objectName
+	u, err := h.svc.UpdateProfile(uid, "", relativePath, "", "")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, apimodel.ErrorResponse(apimodel.CodeInternalError, "update profile failed"))
 		return
 	}
-	c.JSON(http.StatusOK, apimodel.SuccessResponse(apimodel.AppUserInfo{ID: u.ID, Email: u.Email, Nickname: u.Nickname, Avatar: u.Avatar, Gender: u.Gender, Bio: u.Bio}))
+	c.JSON(http.StatusOK, apimodel.SuccessResponse(apimodel.AppUserInfo{ID: u.ID, Email: u.Email, Nickname: u.Nickname, Avatar: h.fullAvatarURL(u.Avatar), Gender: u.Gender, Bio: u.Bio}))
 }
 
 // appMimeAllowed 与存储 handler 类似：支持 * / 前缀 / 精确；为空表示不限制

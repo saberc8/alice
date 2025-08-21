@@ -1,4 +1,7 @@
-import 'dart:io';
+// ignore: depend_on_referenced_packages
+import 'dart:io' show File; // 条件使用，仅在非 Web 环境有效
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:dio/dio.dart';
 import 'package:client_flutter/core/network/dio_client.dart';
 
@@ -33,13 +36,23 @@ class ProfileService {
     throw Exception('更新资料失败: ${res.statusCode}');
   }
 
-  Future<Map<String, dynamic>> uploadAvatar(File file) async {
-    final form = FormData.fromMap({
-      'file': await MultipartFile.fromFile(
-        file.path,
-        filename: file.path.split('/').last,
-      ),
-    });
+  /// Web 与 移动端统一的上传接口
+  /// [file] 仅在非 Web 使用；Web 需传入 [bytes]
+  Future<Map<String, dynamic>> uploadAvatar({
+    File? file,
+    Uint8List? bytes,
+    required String filename,
+  }) async {
+    MultipartFile mf;
+    if (kIsWeb) {
+      if (bytes == null) throw Exception('Web 上传缺少字节数据');
+      mf = MultipartFile.fromBytes(bytes, filename: filename);
+    } else {
+      final f = file;
+      if (f == null) throw Exception('缺少文件');
+      mf = await MultipartFile.fromFile(f.path, filename: filename);
+    }
+    final form = FormData.fromMap({'file': mf});
     final res = await _dio.post('/api/v1/app/profile/avatar', data: form);
     if (res.statusCode == 200) {
       final data = res.data is Map ? res.data['data'] : null;

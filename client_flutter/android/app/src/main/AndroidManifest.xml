@@ -1,4 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 图片/拍照相关权限 -->
+    <!-- Android 13+ 使用 READ_MEDIA_IMAGES；低版本仍需 READ_EXTERNAL_STORAGE -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <!-- 拍照 -->
+    <uses-permission android:name="android.permission.CAMERA" />
     <application
         android:label="client_flutter"
         android:name="${applicationName}"

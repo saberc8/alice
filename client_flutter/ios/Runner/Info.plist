@@ -45,5 +45,12 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Image picker permissions -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>需要访问相册以选择头像</string>
+	<key>NSCameraUsageDescription</key>
+	<string>需要使用相机拍摄头像</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>需要保存头像到相册</string>
 </dict>
 </plist>
