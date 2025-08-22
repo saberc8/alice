@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:client_flutter/theme/app_theme.dart';
 // removed health check
 import 'package:client_flutter/features/auth/login_page.dart';
@@ -6,9 +7,10 @@ import 'package:client_flutter/features/home/home_tabs.dart';
 import 'package:client_flutter/core/auth/token_store.dart';
 import 'package:client_flutter/features/chat/chat_page.dart';
 import 'package:client_flutter/features/contacts/friend_profile_page.dart';
+import 'package:client_flutter/core/state/app_providers.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatefulWidget {
@@ -35,6 +37,10 @@ class _MyAppState extends State<MyApp> {
 
   void _onLogin() {
     setState(() => _loggedIn = true);
+    // Riverpod 同步 token
+    final container = ProviderScope.containerOf(context, listen: false);
+    container.read(authTokenProvider.notifier).state =
+        TokenStore.instance.token;
   }
 
   @override
@@ -68,6 +74,11 @@ class _MyAppState extends State<MyApp> {
                   await TokenStore.instance.clear();
                   if (!mounted) return;
                   setState(() => _loggedIn = false);
+                  final container = ProviderScope.containerOf(
+                    context,
+                    listen: false,
+                  );
+                  container.read(authTokenProvider.notifier).state = null;
                 },
               ),
     );

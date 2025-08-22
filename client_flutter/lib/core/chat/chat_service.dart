@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:client_flutter/core/network/dio_client.dart';
+import 'package:client_flutter/core/network/api_client.dart';
 import 'package:client_flutter/core/auth/token_store.dart';
 import 'package:dio/dio.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -9,6 +10,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 /// Lightweight chat service for p2p chat via backend described in docs/ws.md
 class ChatService {
   final Dio _dio = DioClient().dio;
+  final _api = ApiClient.instance;
 
   /// Open a websocket connection with Bearer token via query param.
   /// Returns a [Stream] of decoded message maps and a [sink] to send.
@@ -73,16 +75,11 @@ class ChatService {
     int page = 1,
     int pageSize = 20,
   }) async {
-    final res = await _dio.get(
+    return _api.get<Map<String, dynamic>>(
       '/api/v1/app/chat/history/$peerId',
-      queryParameters: {'page': page, 'page_size': pageSize},
+      query: {'page': page, 'page_size': pageSize},
+      parser: (d) => (d is Map<String, dynamic>) ? d : <String, dynamic>{},
     );
-    if (res.statusCode == 200) {
-      final data = res.data is Map ? res.data['data'] : null;
-      if (data is Map<String, dynamic>) return data;
-      throw Exception('响应格式错误');
-    }
-    throw Exception('获取历史失败: ${res.statusCode}');
   }
 
   /// 获取最近会话列表
@@ -90,15 +87,10 @@ class ChatService {
     int page = 1,
     int pageSize = 20,
   }) async {
-    final res = await _dio.get(
+    return _api.get<Map<String, dynamic>>(
       '/api/v1/app/chat/conversations',
-      queryParameters: {'page': page, 'page_size': pageSize},
+      query: {'page': page, 'page_size': pageSize},
+      parser: (d) => (d is Map<String, dynamic>) ? d : <String, dynamic>{},
     );
-    if (res.statusCode == 200) {
-      final data = res.data is Map ? res.data['data'] : null;
-      if (data is Map<String, dynamic>) return data;
-      throw Exception('响应格式错误');
-    }
-    throw Exception('获取会话列表失败: ${res.statusCode}');
   }
 }
