@@ -1,9 +1,5 @@
 # Alice - 企业级Go后端项目
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/coze-dev/alice)](https://goreportcard.com/report/github.com/coze-dev/alice)
-[![MIT License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Go Version](https://img.shields.io/badge/go-%3E%3D1.21-blue.svg)](https://golang.org/)
-
 Alice 是一个基于 Go 和 Gin 框架的企业级后端项目，采用 DDD（领域驱动设计）架构模式。项目提供了完整的用户认证系统，支持 JWT 认证、角色权限管理，并遵循现代软件工程的最佳实践。
 
 ## 🚀 特性
@@ -19,74 +15,13 @@ Alice 是一个基于 Go 和 Gin 框架的企业级后端项目，采用 DDD（�
 - **测试**: 单元测试和集成测试
 - **CI/CD**: GitHub Actions 工作流
 
-## 📋 目录
-
-- [快速开始](#快速开始)
-- [项目结构](#项目结构)
-- [架构设计](#架构设计)
-- [API 文档](#api-文档)
-- [开发指南](#开发指南)
-- [部署指南](#部署指南)
-- [贡献指南](#贡献指南)
-
 ## 🏃 快速开始
 
 ### 环境要求
 
 - Go 1.21+
 - PostgreSQL 13+
-- Docker (可选)
 - Make
-
-### 本地开发
-
-1. **克隆项目**
-```bash
-git clone https://github.com/coze-dev/alice.git
-cd alice
-```
-
-2. **安装依赖**
-```bash
-make deps
-```
-
-3. **启动数据库**
-```bash
-# 使用 Docker
-make db-setup
-
-# 或手动创建 PostgreSQL 数据库
-createdb alice
-```
-
-4. **配置环境**
-```bash
-cp config.yaml.example config.yaml
-# 编辑 config.yaml 设置数据库连接信息
-```
-
-5. **运行项目**
-```bash
-make run
-# 或开发模式
-make dev
-```
-
-6. **测试接口**
-```bash
-curl http://localhost:8090/health
-```
-
-### Docker 部署
-
-```bash
-# 构建镜像
-make docker-build
-
-# 运行容器
-docker-compose up -d
-```
 
 ## 📁 项目结构
 
@@ -323,23 +258,6 @@ logger.Infof("Creating role: %s", roleName)
 logger.Errorf("Failed to create role: %v", err)
 ```
 
-## 🧪 测试规范
-
-### 单元测试
-- 每个包都应该有对应的测试文件
-- 测试文件命名: `*_test.go`
-- 测试覆盖率要求: > 80%
-
-### 集成测试
-```bash
-make test-integration
-```
-
-### API 测试
-```bash
-make test-api
-```
-
 ## 📚 API 文档
 
 API 文档使用 Swagger/OpenAPI 3.0 规范，访问地址：
@@ -406,7 +324,6 @@ if cfg.Server.EnableSwagger {
 - `PUT /api/v1/roles/:id` - 更新角色
 - `DELETE /api/v1/roles/:id` - 删除角色
 
-## 🚢 部署指南
 
 ### 环境变量
 
@@ -420,52 +337,3 @@ if cfg.Server.EnableSwagger {
 | `DB_NAME` | 数据库名 | `alice` |
 | `JWT_SECRET` | JWT 密钥 | - |
 | `ENABLE_SWAGGER` | 是否启用 swagger 文档 | `true` |
-
-### Docker 部署
-```bash
-docker run -d \
-  --name alice \
-  -p 8090:8090 \
-  -e DB_HOST=db \
-  -e DB_PASSWORD=password \
-  alice:latest
-```
-
-### Kubernetes 部署
-```bash
-kubectl apply -f k8s/
-```
-
-## 🤝 贡献指南
-
-我们欢迎社区贡献！请查看 [贡献指南](CONTRIBUTING.md) 了解如何参与项目开发。
-
-### 开发流程
-
-1. Fork 项目
-2. 创建功能分支 (`git checkout -b feature/amazing-feature`)
-3. 提交更改 (`git commit -m 'Add some amazing feature'`)
-4. 推送到分支 (`git push origin feature/amazing-feature`)
-5. 创建 Pull Request
-
-### 代码审查
-
-所有代码都需要通过 Code Review 才能合并到主分支。
-
-## 📄 许可证
-
-本项目采用 Apache 2.0 许可证。详见 [LICENSE](LICENSE) 文件。
-
-## 📞 联系我们
-
-- 项目主页: https://github.com/coze-dev/alice
-- Issue 跟踪: https://github.com/coze-dev/alice/issues
-- 讨论区: https://github.com/coze-dev/alice/discussions
-
-## 🙏 致谢
-
-感谢所有为项目做出贡献的开发者！
-
----
-
-**注意**: 这是一个示例项目，仅用于演示 DDD 架构和 Go 开发最佳实践。
