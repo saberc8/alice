@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:client_flutter/core/chat/chat_service.dart';
 import 'package:flutter/material.dart';
 import 'package:client_flutter/ui/we_colors.dart';
+import 'package:client_flutter/ui/widgets/emoji_picker.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key, required this.peer});
@@ -15,6 +16,8 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final _svc = ChatService();
   final _msgCtrl = TextEditingController();
+  final FocusNode _inputFocus = FocusNode();
+  bool _showEmoji = false; // 是否显示表情面板
 
   final List<Map<String, dynamic>> _messages = [];
   StreamSubscription<Map<String, dynamic>>? _sub;
@@ -115,6 +118,32 @@ class _ChatPageState extends State<ChatPage> {
     if (text.isEmpty || _sink == null) return;
     _sink!.add({'type': 'text', 'to': _peerId, 'content': text});
     _msgCtrl.clear();
+    // 发送后保持输入焦点
+    if (!_inputFocus.hasFocus) _inputFocus.requestFocus();
+  }
+
+  void _toggleEmojiPanel() {
+    // 如果键盘在，就先收起键盘再展示表情
+    if (_showEmoji) {
+      setState(() => _showEmoji = false);
+      // 回到输入焦点
+      _inputFocus.requestFocus();
+    } else {
+      // 取消文本焦点 -> 收起系统键盘
+      _inputFocus.unfocus();
+      setState(() => _showEmoji = true);
+    }
+  }
+
+  void _onEmojiSelected(String emoji) {
+    final text = _msgCtrl.text;
+    final sel = _msgCtrl.selection;
+    final insertAt = sel.isValid ? sel.start : text.length;
+    final newText = text.replaceRange(insertAt, insertAt, emoji);
+    _msgCtrl.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: insertAt + emoji.length),
+    );
   }
 
   @override
@@ -209,30 +238,57 @@ class _ChatPageState extends State<ChatPage> {
           ),
           SafeArea(
             top: false,
-            child: Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(
-                    Icons.add_circle_outline,
-                    color: WeColors.textSecondary,
-                  ),
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _msgCtrl,
-                    decoration: const InputDecoration(
-                      hintText: '发消息',
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: _toggleEmojiPanel,
+                      icon: Icon(
+                        _showEmoji
+                            ? Icons.keyboard_alt_outlined
+                            : Icons.tag_faces_outlined,
+                        color: WeColors.textSecondary,
+                      ),
                     ),
-                    minLines: 1,
-                    maxLines: 4,
-                  ),
+                    Expanded(
+                      child: TextField(
+                        focusNode: _inputFocus,
+                        controller: _msgCtrl,
+                        decoration: const InputDecoration(
+                          hintText: '发消息',
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                        minLines: 1,
+                        maxLines: 4,
+                        onTap: () {
+                          if (_showEmoji) setState(() => _showEmoji = false);
+                        },
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: _send,
+                      icon: const Icon(
+                        Icons.send_rounded,
+                        color: WeColors.brand,
+                      ),
+                    ),
+                  ],
                 ),
-                IconButton(
-                  onPressed: _send,
-                  icon: const Icon(Icons.send_rounded, color: WeColors.brand),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child:
+                      _showEmoji
+                          ? SizedBox(
+                            key: const ValueKey('emoji'),
+                            height: 300,
+                            child: EmojiPicker(
+                              onSelected: (e) => _onEmojiSelected(e),
+                            ),
+                          )
+                          : const SizedBox.shrink(key: ValueKey('empty')),
                 ),
               ],
             ),

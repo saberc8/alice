@@ -10,10 +10,25 @@ class AppTheme {
 
   static ThemeData light() {
     final base = ThemeData.light(useMaterial3: true);
+    final scheme = ColorScheme.fromSeed(seedColor: primary).copyWith(
+      background: Colors.white,
+      surface: Colors.white,
+      surfaceVariant: Colors.white,
+    );
     return base.copyWith(
-      colorScheme: ColorScheme.fromSeed(seedColor: primary),
+      colorScheme: scheme,
       primaryColor: primary,
-      scaffoldBackgroundColor: WeColors.background,
+      scaffoldBackgroundColor: Colors.white,
+      canvasColor: Colors.white,
+      dialogBackgroundColor: Colors.white,
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        elevation: 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+        ),
+      ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.white,
         foregroundColor: WeColors.textPrimary,
@@ -26,9 +41,9 @@ class AppTheme {
         foregroundColor: Colors.white,
       ),
       tabBarTheme: const TabBarTheme(
-        indicatorColor: Colors.white,
-        labelColor: Colors.white,
-        unselectedLabelColor: Colors.white70,
+        indicatorColor: primary,
+        labelColor: primary,
+        unselectedLabelColor: WeColors.textSecondary,
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         selectedItemColor: primary,

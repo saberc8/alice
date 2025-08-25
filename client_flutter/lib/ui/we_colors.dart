@@ -10,7 +10,8 @@ class WeColors {
   static const Color textPrimary = Color(0xFF111111);
   static const Color textSecondary = Color(0xFF7F7F7F);
   static const Color divider = Color(0xFFEFEFEF);
-  static const Color background = Color(0xFFF7F7F7);
+  // 全局背景调为纯白
+  static const Color background = Colors.white;
   static const Color cell = Colors.white;
 
   /// Chat bubbles
