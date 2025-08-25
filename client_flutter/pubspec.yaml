@@ -38,6 +38,7 @@ dependencies:
   shared_preferences: ^2.3.4
   web_socket_channel: ^2.4.0
   image_picker: ^1.1.2
+  url_launcher: ^6.3.0
   permission_handler: ^11.3.1
   equatable: ^2.0.5
   provider: ^6.1.2

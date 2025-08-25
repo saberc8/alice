@@ -115,6 +115,29 @@ class ChatService {
     );
   }
 
+  /// 上传图片到对象存储后返回 url，供发送图片消息使用
+  /// bucket 可根据后端策略自定义，这里采用 `chat`，若不存在需提前创建
+  Future<String?> uploadImage(String path) async {
+    try {
+      final fileName = path.split('/').last;
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(path, filename: fileName),
+      });
+      final resp = await _dio.post(
+        '/api/v1/app/chat/images',
+        data: formData,
+        options: Options(headers: {'Content-Type': 'multipart/form-data'}),
+      );
+      final data = resp.data;
+      if (data is Map && data['data'] is Map) {
+        final inner = data['data'] as Map;
+        final url = inner['url'] ?? inner['path'];
+        if (url is String) return url;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   Future<void> _ensureProfile() async {
     if (_selfId != null) return;
     try {

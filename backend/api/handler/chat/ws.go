@@ -2,7 +2,9 @@ package chat
 
 import (
 	"fmt"
+	"io"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -12,6 +14,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	apimodel "alice/api/model"
+	"alice/application"
 	appuserservice "alice/domain/appuser/service"
 	chatservice "alice/domain/chat/service"
 	"alice/infra/config"
@@ -195,6 +198,85 @@ func (h *Hub) MarkRead(c *gin.Context) {
 	c.JSON(http.StatusOK, apimodel.SuccessResponse(gin.H{"peer_id": req.PeerID, "before_id": req.BeforeID, "ts": time.Now().Unix()}))
 }
 
+// UploadImage 聊天图片上传（仅允许图片 mime）
+func (h *Hub) UploadImage(c *gin.Context) {
+	idAny, ok := c.Get("app_user_id")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, apimodel.ErrorResponse(apimodel.CodeUnauthorized, "unauthorized"))
+		return
+	}
+	uid, _ := idAny.(uint)
+	if application.ObjectStore == nil {
+		c.JSON(http.StatusInternalServerError, apimodel.ErrorResponse(apimodel.CodeInternalError, "storage not initialized"))
+		return
+	}
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, "missing file"))
+		return
+	}
+	defer file.Close()
+	data, err := io.ReadAll(file)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, apimodel.ErrorResponse(apimodel.CodeInternalError, "read file failed"))
+		return
+	}
+	cfg := config.Load()
+	maxBytes := int64(cfg.Minio.MaxFileSizeMB) * 1024 * 1024
+	if maxBytes > 0 && int64(len(data)) > maxBytes {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, "file too large"))
+		return
+	}
+	contentType := header.Header.Get("Content-Type")
+	if !strings.HasPrefix(strings.ToLower(contentType), "image/") {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, "only image allowed"))
+		return
+	}
+	if !appMimeAllowed(cfg.Minio.AllowedMIMEs, contentType) { // 复用 app 头像/动态校验逻辑
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, "mime not allowed"))
+		return
+	}
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+	if len(ext) > 10 {
+		ext = ""
+	}
+	objectName := "chat-" + strconv.FormatUint(uint64(uid), 10) + "-" + strconv.FormatInt(time.Now().UnixNano(), 10) + ext
+	bucket := "app-chat-images"
+	_, err = application.ObjectStore.PutObject(c.Request.Context(), bucket, objectName, data, contentType)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, err.Error()))
+		return
+	}
+	relative := "/" + bucket + "/" + objectName
+	// 使用与 Conversations 中相同的 full() 逻辑构造完整 URL
+	fullURL := func(raw string) string {
+		if raw == "" {
+			return ""
+		}
+		lw := strings.ToLower(raw)
+		if strings.HasPrefix(lw, "http://") || strings.HasPrefix(lw, "https://") {
+			return raw
+		}
+		cfg2 := config.Load()
+		base := cfg2.Minio.BaseURL
+		if base == "" {
+			scheme := "http"
+			if cfg2.Minio.UseSSL {
+				scheme = "https"
+			}
+			base = scheme + "://" + cfg2.Minio.Endpoint
+		}
+		if strings.HasSuffix(base, "/") {
+			base = strings.TrimRight(base, "/")
+		}
+		if !strings.HasPrefix(raw, "/") {
+			raw = "/" + raw
+		}
+		return base + raw
+	}
+	c.JSON(http.StatusOK, apimodel.SuccessResponse(gin.H{"path": relative, "url": fullURL(relative)}))
+}
+
 func parseUintParam(c *gin.Context, name string) (uint, error) {
 	v := c.Param(name)
 	if v == "" {
@@ -229,4 +311,30 @@ func getAppUserID(c *gin.Context) (uint, error) {
 		return uint(f), nil
 	}
 	return 0, fmt.Errorf("invalid app_user_id type")
+}
+
+// appMimeAllowed 复制自 app_user_handler，保持一致
+func appMimeAllowed(allowed []string, ct string) bool {
+	if len(allowed) == 0 {
+		return true
+	}
+	ct = strings.ToLower(ct)
+	for _, a := range allowed {
+		a = strings.ToLower(strings.TrimSpace(a))
+		if a == "" {
+			continue
+		}
+		if a == "*" {
+			return true
+		}
+		if strings.HasSuffix(a, "/*") {
+			prefix := strings.TrimSuffix(a, "/*") + "/"
+			if strings.HasPrefix(ct, prefix) {
+				return true
+			}
+		} else if a == ct {
+			return true
+		}
+	}
+	return false
 }

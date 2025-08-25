@@ -4,6 +4,8 @@ import 'package:client_flutter/core/chat/chat_service.dart';
 import 'package:flutter/material.dart';
 import 'package:client_flutter/ui/we_colors.dart';
 import 'package:client_flutter/ui/widgets/emoji_picker.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key, required this.peer});
@@ -122,6 +124,65 @@ class _ChatPageState extends State<ChatPage> {
     if (!_inputFocus.hasFocus) _inputFocus.requestFocus();
   }
 
+  Future<void> _sendImage() async {
+    try {
+      final picker = ImagePicker();
+      final img = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+      if (img == null) return;
+      final url = await _svc.uploadImage(img.path);
+      if (url == null || _sink == null) return;
+      _sink!.add({'type': 'image', 'to': _peerId, 'content': url});
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('图片发送失败: $e')));
+    }
+  }
+
+  void _sendLink() async {
+    final ctrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('发送链接'),
+            content: TextField(
+              controller: ctrl,
+              decoration: const InputDecoration(
+                hintText: '输入以 http/https 开头的链接',
+              ),
+              autofocus: true,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('取消'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('发送'),
+              ),
+            ],
+          ),
+    );
+    if (ok != true) return;
+    final url = ctrl.text.trim();
+    if (url.isEmpty || _sink == null) return;
+    // 简单校验
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('链接格式不正确')));
+      return;
+    }
+    _sink!.add({'type': 'link', 'to': _peerId, 'content': url});
+  }
+
   void _toggleEmojiPanel() {
     // 如果键盘在，就先收起键盘再展示表情
     if (_showEmoji) {
@@ -206,6 +267,64 @@ class _ChatPageState extends State<ChatPage> {
                           final isMe =
                               m['receiver_id'] == _peerId ? true : false;
                           // In absence of my id, infer by receiver_id equals peer
+                          final type = m['type']?.toString() ?? 'text';
+                          Widget contentWidget;
+                          if (type == 'image') {
+                            final url = m['content']?.toString() ?? '';
+                            contentWidget = GestureDetector(
+                              onTap: () async {
+                                if (await canLaunchUrl(Uri.parse(url))) {
+                                  await launchUrl(
+                                    Uri.parse(url),
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                }
+                              },
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  url,
+                                  width: 180,
+                                  height: 180,
+                                  fit: BoxFit.cover,
+                                  errorBuilder:
+                                      (_, __, ___) => const SizedBox(
+                                        width: 120,
+                                        height: 120,
+                                        child: Center(
+                                          child: Icon(Icons.broken_image),
+                                        ),
+                                      ),
+                                ),
+                              ),
+                            );
+                          } else if (type == 'link') {
+                            final url = m['content']?.toString() ?? '';
+                            contentWidget = InkWell(
+                              onTap: () async {
+                                if (await canLaunchUrl(Uri.parse(url))) {
+                                  await launchUrl(
+                                    Uri.parse(url),
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                }
+                              },
+                              child: Text(
+                                url,
+                                style: const TextStyle(
+                                  color: Colors.blue,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            );
+                          } else {
+                            contentWidget = Text(
+                              m['content']?.toString() ?? '',
+                              style: TextStyle(
+                                color: isMe ? Colors.black : Colors.black87,
+                              ),
+                            );
+                          }
                           return Align(
                             alignment:
                                 isMe
@@ -224,12 +343,7 @@ class _ChatPageState extends State<ChatPage> {
                                         : WeColors.bubbleOther,
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Text(
-                                m['content']?.toString() ?? '',
-                                style: TextStyle(
-                                  color: isMe ? Colors.black : Colors.black87,
-                                ),
-                              ),
+                              child: contentWidget,
                             ),
                           );
                         },
@@ -249,6 +363,20 @@ class _ChatPageState extends State<ChatPage> {
                         _showEmoji
                             ? Icons.keyboard_alt_outlined
                             : Icons.tag_faces_outlined,
+                        color: WeColors.textSecondary,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: _sendImage,
+                      icon: const Icon(
+                        Icons.image_outlined,
+                        color: WeColors.textSecondary,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: _sendLink,
+                      icon: const Icon(
+                        Icons.link,
                         color: WeColors.textSecondary,
                       ),
                     ),
