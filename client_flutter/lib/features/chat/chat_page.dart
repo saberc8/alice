@@ -6,6 +6,8 @@ import 'package:client_flutter/ui/we_colors.dart';
 import 'package:client_flutter/ui/widgets/emoji_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:video_player/video_player.dart';
+import 'package:client_flutter/features/moments/ui/user_moment_list_page.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key, required this.peer});
@@ -19,6 +21,7 @@ class _ChatPageState extends State<ChatPage> {
   final _svc = ChatService();
   final _msgCtrl = TextEditingController();
   final FocusNode _inputFocus = FocusNode();
+  final ScrollController _scrollCtrl = ScrollController();
   bool _showEmoji = false; // 是否显示表情面板
 
   final List<Map<String, dynamic>> _messages = [];
@@ -91,6 +94,10 @@ class _ChatPageState extends State<ChatPage> {
       setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
+      // 首帧渲染后滚动到底部
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _scrollToBottom(jump: true),
+      );
     }
   }
 
@@ -98,6 +105,8 @@ class _ChatPageState extends State<ChatPage> {
     if (!_hasMore) return;
     final next = _page + 1;
     try {
+      final prevMaxExtent =
+          _scrollCtrl.hasClients ? _scrollCtrl.position.maxScrollExtent : null;
       final data = await _svc.getHistory(
         peerId: _peerId,
         page: next,
@@ -111,17 +120,27 @@ class _ChatPageState extends State<ChatPage> {
           _page = next;
           _messages.insertAll(0, items.cast<Map<String, dynamic>>().reversed);
         });
+        // 维持视口位置不跳动
+        if (prevMaxExtent != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!_scrollCtrl.hasClients) return;
+            final newMax = _scrollCtrl.position.maxScrollExtent;
+            final delta = newMax - prevMaxExtent;
+            final newOffset = _scrollCtrl.offset + delta;
+            _scrollCtrl.jumpTo(newOffset);
+          });
+        }
       }
     } catch (_) {}
   }
 
-  void _send() {
+  void _sendTextByIME() {
     final text = _msgCtrl.text.trim();
     if (text.isEmpty || _sink == null) return;
     _sink!.add({'type': 'text', 'to': _peerId, 'content': text});
     _msgCtrl.clear();
-    // 发送后保持输入焦点
-    if (!_inputFocus.hasFocus) _inputFocus.requestFocus();
+    // 发送后稍后滚动到底部
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
   }
 
   Future<void> _sendImage() async {
@@ -140,6 +159,26 @@ class _ChatPageState extends State<ChatPage> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('图片发送失败: $e')));
+    }
+  }
+
+  Future<void> _sendVideo() async {
+    try {
+      final picker = ImagePicker();
+      final vid = await picker.pickVideo(
+        source: ImageSource.gallery,
+        maxDuration: const Duration(minutes: 5),
+      );
+      if (vid == null) return;
+      final url = await _svc.uploadVideo(vid.path);
+      if (url == null || _sink == null) return;
+      _sink!.add({'type': 'video', 'to': _peerId, 'content': url});
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('视频发送失败: $e')));
+      }
     }
   }
 
@@ -207,11 +246,53 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+  void _showMoreActions() {
+    showModalBottomSheet(
+      context: context,
+      builder:
+          (ctx) => SafeArea(
+            child: SizedBox(
+              height: 160,
+              child: GridView.count(
+                crossAxisCount: 4,
+                children: [
+                  _ActionIcon(
+                    icon: Icons.image_outlined,
+                    label: '图片',
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _sendImage();
+                    },
+                  ),
+                  _ActionIcon(
+                    icon: Icons.videocam_outlined,
+                    label: '视频',
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _sendVideo();
+                    },
+                  ),
+                  _ActionIcon(
+                    icon: Icons.link,
+                    label: '链接',
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _sendLink();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
   @override
   void dispose() {
     _sub?.cancel();
     _close?.call();
     _msgCtrl.dispose();
+    _scrollCtrl.dispose();
     super.dispose();
   }
 
@@ -257,6 +338,7 @@ class _ChatPageState extends State<ChatPage> {
                         return false;
                       },
                       child: ListView.builder(
+                        controller: _scrollCtrl,
                         padding: const EdgeInsets.symmetric(
                           vertical: 12,
                           horizontal: 12,
@@ -268,6 +350,12 @@ class _ChatPageState extends State<ChatPage> {
                               m['receiver_id'] == _peerId ? true : false;
                           // In absence of my id, infer by receiver_id equals peer
                           final type = m['type']?.toString() ?? 'text';
+                          final sender =
+                              (m['sender'] as Map?)?.cast<String, dynamic>();
+                          final avatarUrl =
+                              isMe
+                                  ? (sender?['avatar'] as String? ?? '')
+                                  : (sender?['avatar'] as String? ?? '');
                           Widget contentWidget;
                           if (type == 'image') {
                             final url = m['content']?.toString() ?? '';
@@ -317,6 +405,9 @@ class _ChatPageState extends State<ChatPage> {
                                 ),
                               ),
                             );
+                          } else if (type == 'video') {
+                            final url = m['content']?.toString() ?? '';
+                            contentWidget = _VideoBubble(url: url);
                           } else {
                             contentWidget = Text(
                               m['content']?.toString() ?? '',
@@ -325,25 +416,38 @@ class _ChatPageState extends State<ChatPage> {
                               ),
                             );
                           }
-                          return Align(
-                            alignment:
-                                isMe
-                                    ? Alignment.centerRight
-                                    : Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 4),
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 8,
-                                horizontal: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                color:
-                                    isMe
-                                        ? WeColors.bubbleMe
-                                        : WeColors.bubbleOther,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: contentWidget,
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment:
+                                  isMe
+                                      ? MainAxisAlignment.end
+                                      : MainAxisAlignment.start,
+                              children: [
+                                if (!isMe)
+                                  _AvatarButton(url: avatarUrl, user: sender),
+                                if (!isMe) const SizedBox(width: 6),
+                                Flexible(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                      horizontal: 12,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          isMe
+                                              ? WeColors.bubbleMe
+                                              : WeColors.bubbleOther,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: contentWidget,
+                                  ),
+                                ),
+                                if (isMe) const SizedBox(width: 6),
+                                if (isMe)
+                                  _AvatarButton(url: avatarUrl, user: sender),
+                              ],
                             ),
                           );
                         },
@@ -366,20 +470,6 @@ class _ChatPageState extends State<ChatPage> {
                         color: WeColors.textSecondary,
                       ),
                     ),
-                    IconButton(
-                      onPressed: _sendImage,
-                      icon: const Icon(
-                        Icons.image_outlined,
-                        color: WeColors.textSecondary,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: _sendLink,
-                      icon: const Icon(
-                        Icons.link,
-                        color: WeColors.textSecondary,
-                      ),
-                    ),
                     Expanded(
                       child: TextField(
                         focusNode: _inputFocus,
@@ -391,16 +481,18 @@ class _ChatPageState extends State<ChatPage> {
                         ),
                         minLines: 1,
                         maxLines: 4,
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) => _sendTextByIME(),
                         onTap: () {
                           if (_showEmoji) setState(() => _showEmoji = false);
                         },
                       ),
                     ),
                     IconButton(
-                      onPressed: _send,
+                      onPressed: _showMoreActions,
                       icon: const Icon(
-                        Icons.send_rounded,
-                        color: WeColors.brand,
+                        Icons.add_circle_outline,
+                        color: WeColors.textSecondary,
                       ),
                     ),
                   ],
@@ -423,6 +515,183 @@ class _ChatPageState extends State<ChatPage> {
           ),
         ],
       ),
+    );
+  }
+
+  bool _isNearBottom() {
+    if (!_scrollCtrl.hasClients) return true;
+    final pos = _scrollCtrl.position;
+    return (pos.maxScrollExtent - pos.pixels) < 120;
+  }
+
+  void _scrollToBottom({bool jump = false}) {
+    if (!_scrollCtrl.hasClients) return;
+    if (jump) {
+      _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
+    } else if (_isNearBottom()) {
+      _scrollCtrl.animateTo(
+        _scrollCtrl.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+}
+
+class _ActionIcon extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _ActionIcon({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircleAvatar(radius: 26, child: Icon(icon, size: 26)),
+          const SizedBox(height: 6),
+          Text(label, style: const TextStyle(fontSize: 12)),
+        ],
+      ),
+    );
+  }
+}
+
+class _AvatarButton extends StatelessWidget {
+  final String url;
+  final Map<String, dynamic>? user;
+  const _AvatarButton({required this.url, required this.user});
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        if (user == null) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => UserMomentListPage(user: user!)),
+        );
+      },
+      child: CircleAvatar(
+        radius: 18,
+        backgroundImage: (url.isNotEmpty) ? NetworkImage(url) : null,
+        child: url.isEmpty ? const Icon(Icons.person_outline, size: 18) : null,
+      ),
+    );
+  }
+}
+
+// 简单的视频气泡：首次点击进入播放模式，使用 VideoPlayer 控制器
+class _VideoBubble extends StatefulWidget {
+  const _VideoBubble({required this.url});
+  final String url;
+  @override
+  State<_VideoBubble> createState() => _VideoBubbleState();
+}
+
+class _VideoBubbleState extends State<_VideoBubble> {
+  VideoPlayerController? _controller;
+  bool _initing = false;
+  bool _playing = false;
+
+  Future<void> _initAndPlay() async {
+    if (_controller != null) {
+      setState(() => _playing = !_playing);
+      if (_playing) {
+        _controller!.play();
+      } else {
+        _controller!.pause();
+      }
+      return;
+    }
+    setState(() => _initing = true);
+    final c = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+    try {
+      await c.initialize();
+      c.setLooping(true);
+      setState(() {
+        _controller = c;
+        _playing = true;
+      });
+      c.play();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('视频加载失败: $e')));
+      }
+      await c.dispose();
+    } finally {
+      if (mounted) setState(() => _initing = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ctrl = _controller;
+    final size = const Size(180, 240);
+    Widget child;
+    if (ctrl == null) {
+      child = Stack(
+        children: [
+          Container(
+            width: size.width,
+            height: size.height,
+            decoration: BoxDecoration(
+              color: Colors.black12,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child:
+                  _initing
+                      ? const CircularProgressIndicator(strokeWidth: 2)
+                      : const Icon(
+                        Icons.play_circle_outline,
+                        size: 48,
+                        color: Colors.black45,
+                      ),
+            ),
+          ),
+        ],
+      );
+    } else {
+      child = Stack(
+        alignment: Alignment.center,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: AspectRatio(
+              aspectRatio:
+                  ctrl.value.aspectRatio == 0 ? 16 / 9 : ctrl.value.aspectRatio,
+              child: VideoPlayer(ctrl),
+            ),
+          ),
+          if (!_playing)
+            Container(
+              color: Colors.black38,
+              child: const Icon(
+                Icons.play_arrow,
+                size: 56,
+                color: Colors.white,
+              ),
+            ),
+        ],
+      );
+    }
+    return GestureDetector(
+      onTap: _initAndPlay,
+      child: SizedBox(width: size.width, height: size.height, child: child),
     );
   }
 }

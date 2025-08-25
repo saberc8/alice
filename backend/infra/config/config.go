@@ -145,7 +145,7 @@ func applyDefaults(c *Config) {
 		c.Minio.MaxFileSizeMB = 20
 	}
 	if len(c.Minio.AllowedMIMEs) == 0 { // 默认允许常见图片/文本
-		c.Minio.AllowedMIMEs = []string{"image/png", "image/jpeg", "image/gif", "text/plain", "application/pdf"}
+		c.Minio.AllowedMIMEs = []string{"image/png", "image/jpeg", "image/gif", "text/plain", "application/pdf", "video/mp4", "video/quicktime", "video/x-matroska"}
 	}
 }
 

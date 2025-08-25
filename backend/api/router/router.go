@@ -144,6 +144,7 @@ func (r *Router) SetupRoutes() *gin.Engine {
 				chat.POST("/read", r.chatHub.MarkRead)
 				chat.GET("/conversations", r.chatHub.Conversations)
 				chat.POST("/images", r.chatHub.UploadImage)
+				chat.POST("/videos", r.chatHub.UploadVideo)
 			}
 		}
 	}

@@ -15,7 +15,9 @@ import (
 
 	apimodel "alice/api/model"
 	"alice/application"
+	appentity "alice/domain/appuser/entity"
 	appuserservice "alice/domain/appuser/service"
+	chatentity "alice/domain/chat/entity"
 	chatservice "alice/domain/chat/service"
 	"alice/infra/config"
 	"alice/pkg/logger"
@@ -75,14 +77,16 @@ func (h *Hub) WS(c *gin.Context) {
 			_ = conn.WriteJSON(gin.H{"error": err.Error()})
 			continue
 		}
+		// 富化消息（附带双方用户基础信息，含头像）
+		enriched := h.enrichSingleMessage(msg)
 		// 给自己回显
-		_ = conn.WriteJSON(msg)
+		_ = conn.WriteJSON(enriched)
 		// 推给对方在线
 		h.mu.RLock()
 		peer := h.conns[payload.To]
 		h.mu.RUnlock()
 		if peer != nil {
-			_ = peer.WriteJSON(msg)
+			_ = peer.WriteJSON(enriched)
 		}
 	}
 }
@@ -102,8 +106,9 @@ func (h *Hub) History(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, err.Error()))
 		return
 	}
+	enriched := h.enrichMessages(items)
 	c.JSON(http.StatusOK, apimodel.SuccessResponse(gin.H{
-		"items":     items,
+		"items":     enriched,
 		"total":     total,
 		"page":      page,
 		"page_size": pageSize,
@@ -174,6 +179,106 @@ func (h *Hub) Conversations(c *gin.Context) {
 		"page":      page,
 		"page_size": pageSize,
 	}))
+}
+
+// enrichSingleMessage 富化单条消息（带 sender / receiver 基础信息）
+func (h *Hub) enrichSingleMessage(m *chatentity.Message) gin.H {
+	if m == nil {
+		return gin.H{}
+	}
+	users, _ := h.appUserSv.GetByIDs([]uint{m.SenderID, m.ReceiverID})
+	userMap := h.userInfoMap(users)
+	return gin.H{
+		"id":          m.ID,
+		"sender_id":   m.SenderID,
+		"receiver_id": m.ReceiverID,
+		"type":        m.Type,
+		"content":     m.Content,
+		"is_read":     m.IsRead,
+		"read_at":     m.ReadAt,
+		"created_at":  m.CreatedAt,
+		"sender":      userMap[m.SenderID],
+		"receiver":    userMap[m.ReceiverID],
+	}
+}
+
+func (h *Hub) enrichMessages(items []*chatentity.Message) []gin.H {
+	// 保持原仓库返回顺序：DESC（最新在前）。前端已有逻辑 items.reversed 来得到升序展示（最新在列表底部）。
+	if len(items) == 0 {
+		return []gin.H{}
+	}
+	idSet := make(map[uint]struct{}, len(items)*2)
+	for _, m := range items {
+		if m == nil {
+			continue
+		}
+		idSet[m.SenderID] = struct{}{}
+		idSet[m.ReceiverID] = struct{}{}
+	}
+	ids := make([]uint, 0, len(idSet))
+	for id := range idSet {
+		ids = append(ids, id)
+	}
+	users, _ := h.appUserSv.GetByIDs(ids)
+	userMap := h.userInfoMap(users)
+	out := make([]gin.H, 0, len(items))
+	for _, m := range items { // 不再反转
+		if m == nil {
+			continue
+		}
+		out = append(out, gin.H{
+			"id":          m.ID,
+			"sender_id":   m.SenderID,
+			"receiver_id": m.ReceiverID,
+			"type":        m.Type,
+			"content":     m.Content,
+			"is_read":     m.IsRead,
+			"read_at":     m.ReadAt,
+			"created_at":  m.CreatedAt,
+			"sender":      userMap[m.SenderID],
+			"receiver":    userMap[m.ReceiverID],
+		})
+	}
+	return out
+}
+
+func (h *Hub) userInfoMap(users []*appentity.AppUser) map[uint]gin.H {
+	m := make(map[uint]gin.H, len(users))
+	if len(users) == 0 {
+		return m
+	}
+	cfg := config.Load()
+	full := func(raw string) string {
+		if raw == "" {
+			return ""
+		}
+		lw := strings.ToLower(raw)
+		if strings.HasPrefix(lw, "http://") || strings.HasPrefix(lw, "https://") {
+			return raw
+		}
+		base := cfg.Minio.BaseURL
+		if base == "" {
+			scheme := "http"
+			if cfg.Minio.UseSSL {
+				scheme = "https"
+			}
+			base = scheme + "://" + cfg.Minio.Endpoint
+		}
+		if strings.HasSuffix(base, "/") {
+			base = strings.TrimRight(base, "/")
+		}
+		if !strings.HasPrefix(raw, "/") {
+			raw = "/" + raw
+		}
+		return base + raw
+	}
+	for _, u := range users {
+		if u == nil {
+			continue
+		}
+		m[u.ID] = gin.H{"id": u.ID, "nickname": u.Nickname, "avatar": full(u.Avatar)}
+	}
+	return m
 }
 
 // MarkRead 标记消息为已读（将对方->我，ID <= before_id 的未读置已读）
@@ -249,6 +354,84 @@ func (h *Hub) UploadImage(c *gin.Context) {
 	}
 	relative := "/" + bucket + "/" + objectName
 	// 使用与 Conversations 中相同的 full() 逻辑构造完整 URL
+	fullURL := func(raw string) string {
+		if raw == "" {
+			return ""
+		}
+		lw := strings.ToLower(raw)
+		if strings.HasPrefix(lw, "http://") || strings.HasPrefix(lw, "https://") {
+			return raw
+		}
+		cfg2 := config.Load()
+		base := cfg2.Minio.BaseURL
+		if base == "" {
+			scheme := "http"
+			if cfg2.Minio.UseSSL {
+				scheme = "https"
+			}
+			base = scheme + "://" + cfg2.Minio.Endpoint
+		}
+		if strings.HasSuffix(base, "/") {
+			base = strings.TrimRight(base, "/")
+		}
+		if !strings.HasPrefix(raw, "/") {
+			raw = "/" + raw
+		}
+		return base + raw
+	}
+	c.JSON(http.StatusOK, apimodel.SuccessResponse(gin.H{"path": relative, "url": fullURL(relative)}))
+}
+
+// UploadVideo 聊天视频上传（仅允许 video mime）
+func (h *Hub) UploadVideo(c *gin.Context) {
+	idAny, ok := c.Get("app_user_id")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, apimodel.ErrorResponse(apimodel.CodeUnauthorized, "unauthorized"))
+		return
+	}
+	uid, _ := idAny.(uint)
+	if application.ObjectStore == nil {
+		c.JSON(http.StatusInternalServerError, apimodel.ErrorResponse(apimodel.CodeInternalError, "storage not initialized"))
+		return
+	}
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, "missing file"))
+		return
+	}
+	defer file.Close()
+	data, err := io.ReadAll(file)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, apimodel.ErrorResponse(apimodel.CodeInternalError, "read file failed"))
+		return
+	}
+	cfg := config.Load()
+	maxBytes := int64(cfg.Minio.MaxFileSizeMB) * 1024 * 1024
+	if maxBytes > 0 && int64(len(data)) > maxBytes {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, "file too large"))
+		return
+	}
+	contentType := header.Header.Get("Content-Type")
+	if !strings.HasPrefix(strings.ToLower(contentType), "video/") {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, "only video allowed"))
+		return
+	}
+	if !appMimeAllowed(cfg.Minio.AllowedMIMEs, contentType) { // 复用校验逻辑
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, "mime not allowed"))
+		return
+	}
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+	if len(ext) > 10 {
+		ext = ""
+	}
+	objectName := "chat-video-" + strconv.FormatUint(uint64(uid), 10) + "-" + strconv.FormatInt(time.Now().UnixNano(), 10) + ext
+	bucket := "app-chat-videos"
+	_, err = application.ObjectStore.PutObject(c.Request.Context(), bucket, objectName, data, contentType)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, err.Error()))
+		return
+	}
+	relative := "/" + bucket + "/" + objectName
 	fullURL := func(raw string) string {
 		if raw == "" {
 			return ""

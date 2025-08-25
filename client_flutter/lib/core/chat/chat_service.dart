@@ -138,6 +138,28 @@ class ChatService {
     return null;
   }
 
+  /// 上传视频
+  Future<String?> uploadVideo(String path) async {
+    try {
+      final fileName = path.split('/').last;
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(path, filename: fileName),
+      });
+      final resp = await _dio.post(
+        '/api/v1/app/chat/videos',
+        data: formData,
+        options: Options(headers: {'Content-Type': 'multipart/form-data'}),
+      );
+      final data = resp.data;
+      if (data is Map && data['data'] is Map) {
+        final inner = data['data'] as Map;
+        final url = inner['url'] ?? inner['path'];
+        if (url is String) return url;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   Future<void> _ensureProfile() async {
     if (_selfId != null) return;
     try {
