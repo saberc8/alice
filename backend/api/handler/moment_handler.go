@@ -59,7 +59,8 @@ func (h *MomentHandler) PostMoment(c *gin.Context) {
 		}
 		imgs = fullImgs
 	}
-	item := apimodel.MomentItem{ID: m.ID, UserID: m.UserID, Nickname: u.Nickname, Avatar: fullAvatarURL(u.Avatar), Content: m.Content, Images: imgs, CreatedAt: m.CreatedAt.Unix()}
+	likeCnt, _ := h.svc.CountLikes(m.ID)
+	item := apimodel.MomentItem{ID: m.ID, UserID: m.UserID, Nickname: u.Nickname, Avatar: fullAvatarURL(u.Avatar), Content: m.Content, Images: imgs, CreatedAt: m.CreatedAt.Unix(), LikeCount: likeCnt, Liked: false}
 	c.JSON(http.StatusOK, apimodel.SuccessResponse(item))
 }
 
@@ -96,6 +97,8 @@ func (h *MomentHandler) ListMoments(c *gin.Context) {
 		return
 	}
 	items := make([]apimodel.MomentItem, 0, len(list))
+	idAny, _ := c.Get("app_user_id")
+	currentUID, _ := idAny.(uint)
 	for _, m := range list {
 		u, _ := application.AppUserSvc.GetByID(m.UserID)
 		imgs := m.ParseImages()
@@ -106,7 +109,9 @@ func (h *MomentHandler) ListMoments(c *gin.Context) {
 			}
 			imgs = fullImgs
 		}
-		items = append(items, apimodel.MomentItem{ID: m.ID, UserID: m.UserID, Nickname: u.Nickname, Avatar: fullAvatarURL(u.Avatar), Content: m.Content, Images: imgs, CreatedAt: m.CreatedAt.Unix()})
+		likeCnt, _ := h.svc.CountLikes(m.ID)
+		liked, _ := h.svc.HasLiked(currentUID, m.ID)
+		items = append(items, apimodel.MomentItem{ID: m.ID, UserID: m.UserID, Nickname: u.Nickname, Avatar: fullAvatarURL(u.Avatar), Content: m.Content, Images: imgs, CreatedAt: m.CreatedAt.Unix(), LikeCount: likeCnt, Liked: liked})
 	}
 	c.JSON(http.StatusOK, apimodel.SuccessResponse(apimodel.MomentListResponse{Items: items, Total: total, Page: page, PageSize: pageSize}))
 }
@@ -151,6 +156,8 @@ func (h *MomentHandler) ListUserMoments(c *gin.Context) {
 		return
 	}
 	items := make([]apimodel.MomentItem, 0, len(list))
+	idAny, _ := c.Get("app_user_id")
+	currentUID, _ := idAny.(uint)
 	for _, m := range list {
 		u, _ := application.AppUserSvc.GetByID(m.UserID)
 		imgs := m.ParseImages()
@@ -161,7 +168,9 @@ func (h *MomentHandler) ListUserMoments(c *gin.Context) {
 			}
 			imgs = fullImgs
 		}
-		items = append(items, apimodel.MomentItem{ID: m.ID, UserID: m.UserID, Nickname: u.Nickname, Avatar: fullAvatarURL(u.Avatar), Content: m.Content, Images: imgs, CreatedAt: m.CreatedAt.Unix()})
+		likeCnt, _ := h.svc.CountLikes(m.ID)
+		liked, _ := h.svc.HasLiked(currentUID, m.ID)
+		items = append(items, apimodel.MomentItem{ID: m.ID, UserID: m.UserID, Nickname: u.Nickname, Avatar: fullAvatarURL(u.Avatar), Content: m.Content, Images: imgs, CreatedAt: m.CreatedAt.Unix(), LikeCount: likeCnt, Liked: liked})
 	}
 	c.JSON(http.StatusOK, apimodel.SuccessResponse(apimodel.MomentListResponse{Items: items, Total: total, Page: page, PageSize: pageSize}))
 }
@@ -259,6 +268,142 @@ func (h *MomentHandler) DeleteMoment(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, apimodel.SuccessResponseWithMessage("deleted", nil))
+}
+
+// LikeMoment 点赞
+// @Summary App 点赞动态
+// @Tags App
+// @Security BearerAuth
+// @Param moment_id path int true "动态ID"
+// @Success 200 {object} model.APIResponse
+// @Router /app/moments/{moment_id}/like [post]
+func (h *MomentHandler) LikeMoment(c *gin.Context) {
+	idAny, ok := c.Get("app_user_id")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, apimodel.ErrorResponse(apimodel.CodeUnauthorized, apimodel.MsgUnauthorized))
+		return
+	}
+	uid, _ := idAny.(uint)
+	midStr := c.Param("moment_id")
+	mid, err := strconv.ParseUint(midStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, apimodel.MsgInvalidRequest))
+		return
+	}
+	if err := h.svc.Like(uid, uint(mid)); err != nil {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, apimodel.SuccessResponseWithMessage("liked", nil))
+}
+
+// UnlikeMoment 取消点赞
+// @Summary App 取消点赞动态
+// @Tags App
+// @Security BearerAuth
+// @Param moment_id path int true "动态ID"
+// @Success 200 {object} model.APIResponse
+// @Router /app/moments/{moment_id}/like [delete]
+func (h *MomentHandler) UnlikeMoment(c *gin.Context) {
+	idAny, ok := c.Get("app_user_id")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, apimodel.ErrorResponse(apimodel.CodeUnauthorized, apimodel.MsgUnauthorized))
+		return
+	}
+	uid, _ := idAny.(uint)
+	midStr := c.Param("moment_id")
+	mid, err := strconv.ParseUint(midStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, apimodel.MsgInvalidRequest))
+		return
+	}
+	if err := h.svc.Unlike(uid, uint(mid)); err != nil {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, apimodel.SuccessResponseWithMessage("unliked", nil))
+}
+
+// AddComment 评论
+// @Summary App 评论动态
+// @Tags App
+// @Security BearerAuth
+// @Accept json
+// @Param moment_id path int true "动态ID"
+// @Param request body model.CreateCommentRequest true "评论内容"
+// @Success 200 {object} model.APIResponse{data=model.MomentCommentItem}
+// @Router /app/moments/{moment_id}/comments [post]
+func (h *MomentHandler) AddComment(c *gin.Context) {
+	idAny, ok := c.Get("app_user_id")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, apimodel.ErrorResponse(apimodel.CodeUnauthorized, apimodel.MsgUnauthorized))
+		return
+	}
+	uid, _ := idAny.(uint)
+	midStr := c.Param("moment_id")
+	mid, err := strconv.ParseUint(midStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, apimodel.MsgInvalidRequest))
+		return
+	}
+	var req apimodel.CreateCommentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, apimodel.MsgInvalidRequest))
+		return
+	}
+	cmt, err := h.svc.AddComment(uid, uint(mid), req.Content)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, err.Error()))
+		return
+	}
+	u, _ := application.AppUserSvc.GetByID(uid)
+	item := apimodel.MomentCommentItem{ID: cmt.ID, MomentID: cmt.MomentID, UserID: cmt.UserID, Nickname: u.Nickname, Avatar: fullAvatarURL(u.Avatar), Content: cmt.Content, CreatedAt: cmt.CreatedAt.Unix()}
+	c.JSON(http.StatusOK, apimodel.SuccessResponse(item))
+}
+
+// ListComments 列出评论
+// @Summary App 动态评论列表
+// @Tags App
+// @Security BearerAuth
+// @Param moment_id path int true "动态ID"
+// @Param page query int false "页码"
+// @Param page_size query int false "每页"
+// @Success 200 {object} model.APIResponse{data=model.MomentCommentListResponse}
+// @Router /app/moments/{moment_id}/comments [get]
+func (h *MomentHandler) ListComments(c *gin.Context) {
+	_, ok := c.Get("app_user_id")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, apimodel.ErrorResponse(apimodel.CodeUnauthorized, apimodel.MsgUnauthorized))
+		return
+	}
+	midStr := c.Param("moment_id")
+	mid, err := strconv.ParseUint(midStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, apimodel.MsgInvalidRequest))
+		return
+	}
+	page, pageSize := 1, 20
+	if v := c.Query("page"); v != "" {
+		if p, err := strconv.Atoi(v); err == nil {
+			page = p
+		}
+	}
+	if v := c.Query("page_size"); v != "" {
+		if ps, err := strconv.Atoi(v); err == nil {
+			pageSize = ps
+		}
+	}
+	list, total, err := h.svc.ListComments(uint(mid), page, pageSize)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, err.Error()))
+		return
+	}
+	items := make([]apimodel.MomentCommentItem, 0, len(list))
+	for _, cm := range list {
+		u, _ := application.AppUserSvc.GetByID(cm.UserID)
+		items = append(items, apimodel.MomentCommentItem{ID: cm.ID, MomentID: cm.MomentID, UserID: cm.UserID, Nickname: u.Nickname, Avatar: fullAvatarURL(u.Avatar), Content: cm.Content, CreatedAt: cm.CreatedAt.Unix()})
+	}
+	c.JSON(http.StatusOK, apimodel.SuccessResponse(apimodel.MomentCommentListResponse{Items: items, Total: total, Page: page, PageSize: pageSize}))
 }
 
 // fullAvatarURL 复制自 AppUserHandler（避免循环引用），后续可抽公共

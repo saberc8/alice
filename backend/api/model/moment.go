@@ -15,6 +15,8 @@ type MomentItem struct {
 	Content   string   `json:"content"`
 	Images    []string `json:"images"`
 	CreatedAt int64    `json:"created_at"`
+	LikeCount int64    `json:"like_count"`
+	Liked     bool     `json:"liked"` // 当前用户是否已点赞
 }
 
 // MomentListResponse 列表响应
@@ -23,4 +25,26 @@ type MomentListResponse struct {
 	Total    int64        `json:"total"`
 	Page     int          `json:"page"`
 	PageSize int          `json:"page_size"`
+}
+
+// Comment 请求与响应
+type CreateCommentRequest struct {
+	Content string `json:"content" binding:"required"`
+}
+
+type MomentCommentItem struct {
+	ID        uint   `json:"id"`
+	MomentID  uint   `json:"moment_id"`
+	UserID    uint   `json:"user_id"`
+	Nickname  string `json:"nickname"`
+	Avatar    string `json:"avatar"`
+	Content   string `json:"content"`
+	CreatedAt int64  `json:"created_at"`
+}
+
+type MomentCommentListResponse struct {
+	Items    []MomentCommentItem `json:"items"`
+	Total    int64               `json:"total"`
+	Page     int                 `json:"page"`
+	PageSize int                 `json:"page_size"`
 }

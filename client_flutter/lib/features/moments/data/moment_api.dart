@@ -43,4 +43,32 @@ class MomentApi {
   Future<void> delete(int momentId) async {
     await _dio.delete('/api/v1/app/moments/$momentId');
   }
+
+  Future<void> like(int momentId) async {
+    await _dio.post('/api/v1/app/moments/$momentId/like');
+  }
+
+  Future<void> unlike(int momentId) async {
+    await _dio.delete('/api/v1/app/moments/$momentId/like');
+  }
+
+  Future<MomentCommentItem> addComment(int momentId, String content) async {
+    final resp = await _dio.post(
+      '/api/v1/app/moments/$momentId/comments',
+      data: {'content': content},
+    );
+    return MomentCommentItem.fromJson(resp.data['data']);
+  }
+
+  Future<MomentCommentListResponse> listComments(
+    int momentId, {
+    int page = 1,
+    int pageSize = 50,
+  }) async {
+    final resp = await _dio.get(
+      '/api/v1/app/moments/$momentId/comments',
+      queryParameters: {'page': page, 'page_size': pageSize},
+    );
+    return MomentCommentListResponse.fromJson(resp.data['data']);
+  }
 }

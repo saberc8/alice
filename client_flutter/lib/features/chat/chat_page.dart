@@ -131,6 +131,7 @@ class _ChatPageState extends State<ChatPage> {
 
     return Scaffold(
       appBar: AppBar(
+        centerTitle: true,
         title: Row(
           children: [
             CircleAvatar(

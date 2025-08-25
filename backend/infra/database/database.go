@@ -48,6 +48,8 @@ func autoMigrate(db *gorm.DB) error {
 
 		// Moments
 		&momentEntity.Moment{},
+		&momentEntity.MomentLike{},
+		&momentEntity.MomentComment{},
 
 		// Chat
 		&chatEntity.Message{},

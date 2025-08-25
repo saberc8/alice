@@ -14,8 +14,12 @@ class WeAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final bg = Theme.of(context).scaffoldBackgroundColor;
     return AppBar(
-      centerTitle: false,
-      titleSpacing: 16,
+      // Force center title on all platforms (iOS/Android/Web) for consistency
+      centerTitle: true,
+      // When centering, default spacing keeps title visually centered; set to 0
+      // so that the framework can calculate proper centering independent of
+      // leading width.
+      titleSpacing: 0,
       backgroundColor: bg,
       elevation: 0.4,
       surfaceTintColor: Colors.transparent,

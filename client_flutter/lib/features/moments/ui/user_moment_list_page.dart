@@ -26,7 +26,10 @@ class _UserMomentListBody extends StatelessWidget {
     final store = context.watch<MomentStore>();
     final nickname = (user['nickname'] as String?) ?? '';
     return Scaffold(
-      appBar: AppBar(title: Text(nickname.isNotEmpty ? nickname : 'TA的朋友圈')),
+      appBar: AppBar(
+        centerTitle: true,
+        title: Text(nickname.isNotEmpty ? nickname : 'TA的朋友圈'),
+      ),
       body: RefreshIndicator(
         onRefresh: store.refresh,
         child: NotificationListener<ScrollNotification>(

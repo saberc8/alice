@@ -13,7 +13,10 @@ class FriendProfilePage extends StatelessWidget {
     final email = (user['email'] as String?) ?? '';
 
     return Scaffold(
-      appBar: AppBar(title: Text(nickname.isNotEmpty ? nickname : email)),
+      appBar: AppBar(
+        centerTitle: true,
+        title: Text(nickname.isNotEmpty ? nickname : email),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

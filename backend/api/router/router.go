@@ -130,6 +130,10 @@ func (r *Router) SetupRoutes() *gin.Engine {
 			appProtected.GET("/moments", r.momentHandler.ListMoments)
 			appProtected.DELETE("/moments/:moment_id", r.momentHandler.DeleteMoment)
 			appProtected.POST("/moments/images", r.momentHandler.UploadImage)
+			appProtected.POST("/moments/:moment_id/like", r.momentHandler.LikeMoment)
+			appProtected.DELETE("/moments/:moment_id/like", r.momentHandler.UnlikeMoment)
+			appProtected.POST("/moments/:moment_id/comments", r.momentHandler.AddComment)
+			appProtected.GET("/moments/:moment_id/comments", r.momentHandler.ListComments)
 			appProtected.GET("/users/:user_id/moments", r.momentHandler.ListUserMoments)
 
 			// Chat routes

@@ -190,6 +190,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final avatarUrl = _current?['avatar'] as String?;
     return Scaffold(
       appBar: AppBar(
+        centerTitle: true,
         title: const Text('编辑资料'),
         actions: [
           TextButton(

@@ -19,6 +19,7 @@ class AppTheme {
         foregroundColor: WeColors.textPrimary,
         elevation: 0.4,
         surfaceTintColor: Colors.transparent,
+        centerTitle: true,
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: primary,

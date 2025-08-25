@@ -56,4 +56,55 @@ class MomentStore extends ChangeNotifier {
     _moments.removeWhere((e) => e.id == id);
     notifyListeners();
   }
+
+  Future<void> like(int id) async {
+    final idx = _moments.indexWhere((e) => e.id == id);
+    if (idx == -1) return;
+    final m = _moments[idx];
+    if (m.liked) return;
+    _moments[idx] = MomentItem(
+      id: m.id,
+      userId: m.userId,
+      nickname: m.nickname,
+      avatar: m.avatar,
+      content: m.content,
+      images: m.images,
+      createdAt: m.createdAt,
+      likeCount: m.likeCount + 1,
+      liked: true,
+    );
+    notifyListeners();
+    try {
+      await api.like(id);
+    } catch (_) {
+      // revert
+      _moments[idx] = m;
+      notifyListeners();
+    }
+  }
+
+  Future<void> unlike(int id) async {
+    final idx = _moments.indexWhere((e) => e.id == id);
+    if (idx == -1) return;
+    final m = _moments[idx];
+    if (!m.liked) return;
+    _moments[idx] = MomentItem(
+      id: m.id,
+      userId: m.userId,
+      nickname: m.nickname,
+      avatar: m.avatar,
+      content: m.content,
+      images: m.images,
+      createdAt: m.createdAt,
+      likeCount: (m.likeCount - 1).clamp(0, 1 << 31),
+      liked: false,
+    );
+    notifyListeners();
+    try {
+      await api.unlike(id);
+    } catch (_) {
+      _moments[idx] = m;
+      notifyListeners();
+    }
+  }
 }
