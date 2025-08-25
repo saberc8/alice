@@ -60,7 +60,26 @@ class _ConversationsPageState
         (peer != null && (peer['nickname'] as String?)?.isNotEmpty == true)
             ? peer['nickname']
             : '用户$peerId';
-    final preview = last != null ? (last['content']?.toString() ?? '') : '';
+    // 预览文案：图片/视频/链接使用占位符，不展示原始 URL
+    String preview = '';
+    if (last != null) {
+      final type = (last['type'] ?? '').toString().toLowerCase();
+      final content = (last['content'] ?? '').toString();
+      if (type == 'image') {
+        preview = '[图片]';
+      } else if (type == 'video') {
+        preview = '[视频]';
+      } else if (type == 'link') {
+        // 若后端未来提供显式 link type
+        preview = '[链接]';
+      } else if (content.startsWith('http://') ||
+          content.startsWith('https://')) {
+        // 文本消息里若是 URL，也做链接占位
+        preview = '[链接]';
+      } else {
+        preview = content;
+      }
+    }
     return WeCell(
       leading: CircleAvatar(
         backgroundColor: Colors.grey.shade200,
