@@ -16,13 +16,19 @@ class HomeTabs extends StatefulWidget {
 
 class _HomeTabsState extends State<HomeTabs> {
   int _index = 0;
+  late final List<Widget> _pages;
 
-  List<Widget> get _pages => [
-    const ConversationsPage(),
-    const ContactsPage(),
-    const DiscoverPage(),
-    ProfilePage(onLogout: widget.onLogout),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // 缓存页面，避免 tab 切换时重复创建导致状态丢失或重建。
+    _pages = [
+      const ConversationsPage(),
+      const ContactsPage(),
+      const DiscoverPage(),
+      ProfilePage(onLogout: widget.onLogout),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +39,7 @@ class _HomeTabsState extends State<HomeTabs> {
           WeTabItem(
             icon: Icons.chat_bubble_outline,
             iconActive: Icons.chat_bubble,
-            label: '微信',
+            label: '小绿书',
           ),
           WeTabItem(
             icon: Icons.contacts_outlined,

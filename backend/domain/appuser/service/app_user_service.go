@@ -25,6 +25,7 @@ type AppUserService interface {
 	Login(email, password string) (string, error)
 	GetByID(id uint) (*appentity.AppUser, error)
 	UpdateProfile(id uint, nickname, avatar, gender, bio string) (*appentity.AppUser, error)
+	GetByIDs(ids []uint) ([]*appentity.AppUser, error)
 }
 
 type appUserServiceImpl struct {
@@ -98,6 +99,10 @@ func (s *appUserServiceImpl) UpdateProfile(id uint, nickname, avatar, gender, bi
 		return nil, err
 	}
 	return u, nil
+}
+
+func (s *appUserServiceImpl) GetByIDs(ids []uint) ([]*appentity.AppUser, error) {
+	return s.repo.GetByIDs(ids)
 }
 
 func (s *appUserServiceImpl) generateToken(userID uint) (string, error) {

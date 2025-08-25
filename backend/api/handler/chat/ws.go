@@ -4,13 +4,17 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
 	apimodel "alice/api/model"
+	appuserservice "alice/domain/appuser/service"
 	chatservice "alice/domain/chat/service"
+	"alice/infra/config"
 	"alice/pkg/logger"
 )
 
@@ -20,13 +24,14 @@ var upgrader = websocket.Upgrader{
 
 // Hub 管理用户连接与转发
 type Hub struct {
-	mu    sync.RWMutex
-	conns map[uint]*websocket.Conn
-	chat  chatservice.ChatService
+	mu        sync.RWMutex
+	conns     map[uint]*websocket.Conn
+	chat      chatservice.ChatService
+	appUserSv appuserservice.AppUserService
 }
 
-func NewHub(s chatservice.ChatService) *Hub {
-	return &Hub{conns: make(map[uint]*websocket.Conn), chat: s}
+func NewHub(s chatservice.ChatService, appUserSv appuserservice.AppUserService) *Hub {
+	return &Hub{conns: make(map[uint]*websocket.Conn), chat: s, appUserSv: appUserSv}
 }
 
 // WS 处理 WebSocket 连接
@@ -116,8 +121,52 @@ func (h *Hub) Conversations(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, err.Error()))
 		return
 	}
+	// 批量获取 peer 用户信息
+	peerIDs := make([]uint, 0, len(items))
+	for _, it := range items {
+		peerIDs = append(peerIDs, it.PeerID)
+	}
+	users, _ := h.appUserSv.GetByIDs(peerIDs)
+	userMap := make(map[uint]gin.H, len(users))
+	cfg := config.Load()
+	full := func(raw string) string {
+		if raw == "" {
+			return ""
+		}
+		lw := strings.ToLower(raw)
+		if strings.HasPrefix(lw, "http://") || strings.HasPrefix(lw, "https://") {
+			return raw
+		}
+		base := cfg.Minio.BaseURL
+		if base == "" {
+			scheme := "http"
+			if cfg.Minio.UseSSL {
+				scheme = "https"
+			}
+			base = scheme + "://" + cfg.Minio.Endpoint
+		}
+		if strings.HasSuffix(base, "/") {
+			base = strings.TrimRight(base, "/")
+		}
+		if !strings.HasPrefix(raw, "/") {
+			raw = "/" + raw
+		}
+		return base + raw
+	}
+	for _, u := range users {
+		userMap[u.ID] = gin.H{"id": u.ID, "nickname": u.Nickname, "avatar": full(u.Avatar)}
+	}
+	respItems := make([]gin.H, 0, len(items))
+	for _, it := range items {
+		respItems = append(respItems, gin.H{
+			"peer_id":      it.PeerID,
+			"last_message": it.LastMessage,
+			"unread_count": it.UnreadCount,
+			"peer":         userMap[it.PeerID],
+		})
+	}
 	c.JSON(http.StatusOK, apimodel.SuccessResponse(gin.H{
-		"items":     items,
+		"items":     respItems,
 		"total":     total,
 		"page":      page,
 		"page_size": pageSize,
@@ -143,7 +192,7 @@ func (h *Hub) MarkRead(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, err.Error()))
 		return
 	}
-	c.JSON(http.StatusOK, apimodel.SuccessResponse(nil))
+	c.JSON(http.StatusOK, apimodel.SuccessResponse(gin.H{"peer_id": req.PeerID, "before_id": req.BeforeID, "ts": time.Now().Unix()}))
 }
 
 func parseUintParam(c *gin.Context, name string) (uint, error) {

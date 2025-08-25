@@ -31,7 +31,7 @@ func NewRouter(
 	menuHandler *handler.MenuHandler,
 ) *Router {
 	// 初始化聊天 Hub（基于应用层 ChatSvc）
-	hub := chathdl.NewHub(application.ChatSvc)
+	hub := chathdl.NewHub(application.ChatSvc, application.AppUserSvc)
 	storageHandler := handler.NewStorageHandler()
 	momentHandler := handler.NewMomentHandler(application.MomentSvc)
 	return &Router{

@@ -9,8 +9,16 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// Lightweight chat service for p2p chat via backend described in docs/ws.md
 class ChatService {
+  ChatService._();
+  static final ChatService _singleton = ChatService._();
+  factory ChatService() => _singleton;
+
   final Dio _dio = DioClient().dio;
   final _api = ApiClient.instance;
+
+  int? _selfId; // 当前用户 id
+  final _bus = StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get messageStream => _bus.stream;
 
   /// Open a websocket connection with Bearer token via query param.
   /// Returns a [Stream] of decoded message maps and a [sink] to send.
@@ -44,10 +52,14 @@ class ChatService {
 
     // incoming
     channel.stream.listen(
-      (event) {
+      (event) async {
         try {
           final data = event is String ? jsonDecode(event) : event;
-          if (data is Map<String, dynamic>) controller.add(data);
+          if (data is Map<String, dynamic>) {
+            controller.add(data);
+            _bus.add(data);
+            if (_selfId == null) _ensureProfile();
+          }
         } catch (_) {}
       },
       onError: controller.addError,
@@ -65,6 +77,7 @@ class ChatService {
       await sinkController.close();
     }
 
+    _ensureProfile(); // 异步获取当前用户 id
     return (controller.stream, sinkController.sink, close);
   }
 
@@ -92,5 +105,28 @@ class ChatService {
       query: {'page': page, 'page_size': pageSize},
       parser: (d) => (d is Map<String, dynamic>) ? d : <String, dynamic>{},
     );
+  }
+
+  Future<void> markRead({required int peerId, required int beforeId}) async {
+    if (beforeId <= 0) return;
+    await _api.post(
+      '/api/v1/app/chat/read',
+      body: {'peer_id': peerId, 'before_id': beforeId},
+    );
+  }
+
+  Future<void> _ensureProfile() async {
+    if (_selfId != null) return;
+    try {
+      final data = await _api.get<Map<String, dynamic>>(
+        '/api/v1/app/profile',
+        parser: (d) => (d is Map<String, dynamic>) ? d : <String, dynamic>{},
+      );
+      final id = data['id'];
+      if (id is int)
+        _selfId = id;
+      else if (id is double)
+        _selfId = id.toInt();
+    } catch (_) {}
   }
 }

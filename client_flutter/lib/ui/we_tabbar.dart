@@ -30,12 +30,16 @@ class WeTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 处理底部安全区 (iPhone 刘海/底部指示条 等)，避免出现额外空白或颜色不一致的小 bar。
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final effectiveHeight = 56.0 + bottomInset; // 让点击区域延伸到底部，同时视觉高度保持 56
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: Color(0xFFE5E5E5), width: 0.5)),
       ),
-      height: 56,
+      height: effectiveHeight,
+      padding: EdgeInsets.only(bottom: bottomInset),
       child: Row(
         children: [
           for (int i = 0; i < items.length; i++) _buildItem(context, i),

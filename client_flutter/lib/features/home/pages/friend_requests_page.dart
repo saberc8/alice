@@ -62,23 +62,18 @@ class _FriendRequestsPageState
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      appBar: WeAppBar(title: '待处理好友请求'),
-      body: _FriendRequestsBody(),
+    // 注意：此前通过额外的 _FriendRequestsBody 组件调用 state.build(context)
+    // 实际上形成了无限递归：_FriendRequestsBody.build -> state.build (本方法) -> Scaffold(body: _FriendRequestsBody)
+    // -> _FriendRequestsBody.build ... 导致 StackOverflow。
+    // 这里直接使用 super.build(context) 获取 BaseListPageState 提供的列表内容，避免递归。
+    return Scaffold(
+      appBar: const WeAppBar(title: '待处理好友请求'),
+      body: super.build(context),
     );
   }
 }
 
-// 将 Body 分离以便使用父类的 build(context)
-class _FriendRequestsBody extends StatelessWidget {
-  const _FriendRequestsBody();
-  @override
-  Widget build(BuildContext context) {
-    final state = context.findAncestorStateOfType<_FriendRequestsPageState>();
-    if (state == null) return const SizedBox.shrink();
-    return state.build(context);
-  }
-}
+// 之前的 _FriendRequestsBody 已移除，不再需要额外包装。
 
 class _FriendRequestItem {
   final int requestId;

@@ -1,6 +1,8 @@
 package chat
 
 import (
+	"time"
+
 	"gorm.io/gorm"
 
 	chatentity "alice/domain/chat/entity"
@@ -34,9 +36,13 @@ func (r *messageRepositoryImpl) ListConversation(a, b uint, offset, limit int) (
 }
 
 func (r *messageRepositoryImpl) MarkRead(a, b uint, beforeID uint) error {
+	if beforeID == 0 {
+		return nil
+	}
+	now := time.Now()
 	return r.db.Model(&chatentity.Message{}).
 		Where("sender_id = ? AND receiver_id = ? AND id <= ? AND is_read = ?", b, a, beforeID, false).
-		Updates(map[string]interface{}{"is_read": true}).Error
+		Updates(map[string]interface{}{"is_read": true, "read_at": &now}).Error
 }
 
 // ListRecentConversations 聚合最近会话

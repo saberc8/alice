@@ -55,6 +55,11 @@ class _ChatPageState extends State<ChatPage> {
       );
       final items = (data['items'] as List?)?.cast<Map>() ?? [];
       _messages.addAll(items.cast<Map<String, dynamic>>().reversed);
+      final lastIncoming = _messages.where((m) => m['sender_id'] == _peerId);
+      if (lastIncoming.isNotEmpty) {
+        final bid = (lastIncoming.last['id'] as num?)?.toInt() ?? 0;
+        if (bid > 0) unawaited(_svc.markRead(peerId: _peerId, beforeId: bid));
+      }
 
       final (stream, sink, close) = _svc.connect();
       _sink = sink;
@@ -66,6 +71,11 @@ class _ChatPageState extends State<ChatPage> {
           final rid = event['receiver_id'];
           if (sid == _peerId || rid == _peerId) {
             setState(() => _messages.add(event));
+            if (sid == _peerId) {
+              final bid = (event['id'] as num?)?.toInt() ?? 0;
+              if (bid > 0)
+                unawaited(_svc.markRead(peerId: _peerId, beforeId: bid));
+            }
           }
         },
         onError: (e) {
