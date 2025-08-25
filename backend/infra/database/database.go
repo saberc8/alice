@@ -53,6 +53,10 @@ func autoMigrate(db *gorm.DB) error {
 
 		// Chat
 		&chatEntity.Message{},
+		&chatEntity.Group{},
+		&chatEntity.GroupMember{},
+		&chatEntity.GroupMessage{},
+		&chatEntity.GroupReadCursor{},
 
 		// RBAC表
 		&rbacEntity.Role{},

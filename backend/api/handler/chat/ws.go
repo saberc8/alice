@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -33,6 +34,7 @@ type Hub struct {
 	conns     map[uint]*websocket.Conn
 	chat      chatservice.ChatService
 	appUserSv appuserservice.AppUserService
+	// group service via application package (quick access)
 }
 
 func NewHub(s chatservice.ChatService, appUserSv appuserservice.AppUserService) *Hub {
@@ -66,22 +68,65 @@ func (h *Hub) WS(c *gin.Context) {
 		var payload struct {
 			Type    string `json:"type"`
 			To      uint   `json:"to"`
+			GroupID uint   `json:"group_id"`
 			Content string `json:"content"`
+			MsgType string `json:"msg_type"`
 		}
 		if err := conn.ReadJSON(&payload); err != nil {
 			logger.Infof("ws read closed: %v", err)
 			return
 		}
-		msg, err := h.chat.Send(uid, payload.To, payload.Content, payload.Type)
+		// 群聊消息
+		if payload.GroupID > 0 {
+			gm, err := application.GroupSvc.SendMessage(payload.GroupID, uid, payload.MsgType, payload.Content)
+			if err != nil {
+				_ = conn.WriteJSON(gin.H{"error": err.Error()})
+				continue
+			}
+			// 富化 sender 信息
+			users, _ := h.appUserSv.GetByIDs([]uint{gm.SenderID})
+			var sender gin.H
+			if len(users) > 0 {
+				sender = h.userInfoMap(users)[gm.SenderID]
+			}
+			resp := gin.H{
+				"type":         "group_message",
+				"group_id":     gm.GroupID,
+				"message_id":   gm.ID,
+				"sender_id":    gm.SenderID,
+				"content":      gm.Content,
+				"message_type": gm.Type,
+				"created_at":   gm.CreatedAt,
+				"sender":       sender,
+			}
+			// 只推送给群成员在线连接
+			memberIDs, _ := application.GroupSvc.ListMemberIDs(gm.GroupID)
+			memberSet := make(map[uint]struct{}, len(memberIDs))
+			for _, mid := range memberIDs {
+				memberSet[mid] = struct{}{}
+			}
+			// 自己先回显
+			_ = conn.WriteJSON(resp)
+			h.mu.RLock()
+			for mid, c2 := range h.conns {
+				if mid == uid { // 已回显
+					continue
+				}
+				if _, ok := memberSet[mid]; ok {
+					_ = c2.WriteJSON(resp)
+				}
+			}
+			h.mu.RUnlock()
+			continue
+		}
+		// 私聊消息
+		msg, err := h.chat.Send(uid, payload.To, payload.Content, firstNonEmpty(payload.MsgType, payload.Type))
 		if err != nil {
 			_ = conn.WriteJSON(gin.H{"error": err.Error()})
 			continue
 		}
-		// 富化消息（附带双方用户基础信息，含头像）
 		enriched := h.enrichSingleMessage(msg)
-		// 给自己回显
 		_ = conn.WriteJSON(enriched)
-		// 推给对方在线
 		h.mu.RLock()
 		peer := h.conns[payload.To]
 		h.mu.RUnlock()
@@ -124,7 +169,7 @@ func (h *Hub) Conversations(c *gin.Context) {
 	}
 	page := parseIntQuery(c, "page", 1)
 	pageSize := parseIntQuery(c, "page_size", 20)
-	items, total, err := h.chat.RecentConversations(uid, page, pageSize)
+	items, _, err := h.chat.RecentConversations(uid, page, pageSize)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, apimodel.ErrorResponse(apimodel.CodeBadRequest, err.Error()))
 		return
@@ -164,21 +209,59 @@ func (h *Hub) Conversations(c *gin.Context) {
 	for _, u := range users {
 		userMap[u.ID] = gin.H{"id": u.ID, "nickname": u.Nickname, "avatar": full(u.Avatar)}
 	}
-	respItems := make([]gin.H, 0, len(items))
+	type convoItem struct {
+		Data gin.H
+		Ts   time.Time
+	}
+	all := make([]convoItem, 0, len(items)+8)
 	for _, it := range items {
-		respItems = append(respItems, gin.H{
+		var ts time.Time
+		lm := gin.H{}
+		if it.LastMessage != nil {
+			lm = gin.H{"id": it.LastMessage.ID, "sender_id": it.LastMessage.SenderID, "receiver_id": it.LastMessage.ReceiverID, "type": it.LastMessage.Type, "content": it.LastMessage.Content, "created_at": it.LastMessage.CreatedAt}
+			ts = it.LastMessage.CreatedAt
+		}
+		all = append(all, convoItem{Ts: ts, Data: gin.H{
+			"type":         "private",
 			"peer_id":      it.PeerID,
-			"last_message": it.LastMessage,
+			"last_message": lm,
 			"unread_count": it.UnreadCount,
 			"peer":         userMap[it.PeerID],
-		})
+		}})
 	}
-	c.JSON(http.StatusOK, apimodel.SuccessResponse(gin.H{
-		"items":     respItems,
-		"total":     total,
-		"page":      page,
-		"page_size": pageSize,
-	}))
+	// 群会话
+	groups, _, _ := application.GroupSvc.ListUserGroups(uid, 1, 200)
+	for _, g := range groups {
+		var lastMsg *chatentity.GroupMessage
+		if mr, ok := application.GroupSvc.(interface {
+			ListMessages(uint, int, int) ([]*chatentity.GroupMessage, int64, error)
+		}); ok {
+			msgs, _, _ := mr.ListMessages(g.ID, 1, 1)
+			if len(msgs) > 0 {
+				lastMsg = msgs[0]
+			}
+		}
+		lm := gin.H{}
+		var ts time.Time
+		if lastMsg != nil {
+			lm = gin.H{"id": lastMsg.ID, "group_id": lastMsg.GroupID, "sender_id": lastMsg.SenderID, "type": lastMsg.Type, "content": lastMsg.Content, "created_at": lastMsg.CreatedAt}
+			ts = lastMsg.CreatedAt
+		}
+		unread, _ := application.GroupSvc.CountUnread(c.Request.Context(), g.ID, uid)
+		all = append(all, convoItem{Ts: ts, Data: gin.H{
+			"type":         "group",
+			"group":        gin.H{"id": g.ID, "name": g.Name, "avatar": g.Avatar},
+			"last_message": lm,
+			"unread_count": unread,
+		}})
+	}
+	// 排序 按 ts desc
+	sort.SliceStable(all, func(i, j int) bool { return all[i].Ts.After(all[j].Ts) })
+	respItems := make([]gin.H, 0, len(all))
+	for _, ci := range all {
+		respItems = append(respItems, ci.Data)
+	}
+	c.JSON(http.StatusOK, apimodel.SuccessResponse(gin.H{"items": respItems, "total": int64(len(all)), "page": page, "page_size": pageSize}))
 }
 
 // enrichSingleMessage 富化单条消息（带 sender / receiver 基础信息）
@@ -279,6 +362,16 @@ func (h *Hub) userInfoMap(users []*appentity.AppUser) map[uint]gin.H {
 		m[u.ID] = gin.H{"id": u.ID, "nickname": u.Nickname, "avatar": full(u.Avatar)}
 	}
 	return m
+}
+
+// local helper (duplicate of chat service) to avoid import cycle
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 // MarkRead 标记消息为已读（将对方->我，ID <= before_id 的未读置已读）

@@ -145,6 +145,20 @@ func (r *Router) SetupRoutes() *gin.Engine {
 				chat.GET("/conversations", r.chatHub.Conversations)
 				chat.POST("/images", r.chatHub.UploadImage)
 				chat.POST("/videos", r.chatHub.UploadVideo)
+
+				// Group chat
+				gh := chathdl.NewGroupHandler()
+				chat.POST("/groups", gh.CreateGroup)
+				chat.GET("/groups/search", gh.SearchGroups)
+				chat.POST("/groups/:group_id/join", gh.JoinGroup)
+				chat.GET("/groups/:group_id/messages", gh.GroupMessages)
+				chat.POST("/groups/read", gh.MarkReadGroup)
+				chat.PUT("/groups/:group_id", gh.UpdateGroup)
+				chat.GET("/groups/:group_id/members", gh.ListMembers)
+				chat.POST("/groups/:group_id/avatar", gh.UploadGroupAvatar)
+				// 成员管理：避免使用冒号触发 Gin wildcard 冲突，改用显式子路径
+				chat.POST("/groups/:group_id/members/add", gh.AddMembers)
+				chat.POST("/groups/:group_id/members/remove", gh.RemoveMember)
 			}
 		}
 	}

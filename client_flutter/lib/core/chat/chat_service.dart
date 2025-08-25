@@ -95,6 +95,18 @@ class ChatService {
     );
   }
 
+  Future<Map<String, dynamic>> getGroupHistory({
+    required int groupId,
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    return _api.get<Map<String, dynamic>>(
+      '/api/v1/app/chat/groups/$groupId/messages',
+      query: {'page': page, 'page_size': pageSize},
+      parser: (d) => (d is Map<String, dynamic>) ? d : <String, dynamic>{},
+    );
+  }
+
   /// 获取最近会话列表
   Future<Map<String, dynamic>> getConversations({
     int page = 1,
@@ -113,6 +125,90 @@ class ChatService {
       '/api/v1/app/chat/read',
       body: {'peer_id': peerId, 'before_id': beforeId},
     );
+  }
+
+  Future<void> markGroupRead({
+    required int groupId,
+    required int beforeMsgId,
+  }) async {
+    if (beforeMsgId <= 0) return;
+    await _api.post(
+      '/api/v1/app/chat/groups/read',
+      body: {'group_id': groupId, 'before_msg_id': beforeMsgId},
+    );
+  }
+
+  Future<Map<String, dynamic>?> updateGroup({
+    required int groupId,
+    String? name,
+    String? avatar,
+  }) async {
+    final body = <String, dynamic>{};
+    if (name != null) body['name'] = name;
+    if (avatar != null) body['avatar'] = avatar;
+    final resp = await _api.put<Map<String, dynamic>>(
+      '/api/v1/app/chat/groups/$groupId',
+      body: body,
+      parser: (d) => (d is Map<String, dynamic>) ? d : <String, dynamic>{},
+    );
+    return resp;
+  }
+
+  Future<String?> uploadGroupAvatar(int groupId, String path) async {
+    try {
+      final fileName = path.split('/').last;
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(path, filename: fileName),
+      });
+      final resp = await _dio.post(
+        '/api/v1/app/chat/groups/$groupId/avatar',
+        data: formData,
+        options: Options(headers: {'Content-Type': 'multipart/form-data'}),
+      );
+      final data = resp.data;
+      if (data is Map && data['data'] is Map) {
+        final inner = data['data'] as Map;
+        final pathOrUrl = inner['url'] ?? inner['path'];
+        if (pathOrUrl is String) return pathOrUrl;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // ===== Group Members APIs =====
+  Future<List<Map<String, dynamic>>> listGroupMembers(int groupId) async {
+    final resp = await _api.get<Map<String, dynamic>>(
+      '/api/v1/app/chat/groups/$groupId/members',
+      parser: (d) => (d is Map<String, dynamic>) ? d : <String, dynamic>{},
+    );
+    final data = resp['members'];
+    if (data is List) {
+      return data
+          .map((e) => (e is Map<String, dynamic>) ? e : <String, dynamic>{})
+          .toList();
+    }
+    return [];
+  }
+
+  Future<void> addGroupMembers(int groupId, List<int> userIds) async {
+    if (userIds.isEmpty) return;
+    await _api.post(
+      '/api/v1/app/chat/groups/$groupId/members/add',
+      body: {'user_ids': userIds},
+    );
+  }
+
+  Future<void> removeGroupMember(int groupId, int userId) async {
+    await _api.post(
+      '/api/v1/app/chat/groups/$groupId/members/remove',
+      body: {'user_id': userId},
+    );
+  }
+
+  Future<int?> selfId() async {
+    if (_selfId != null) return _selfId;
+    await _ensureProfile();
+    return _selfId;
   }
 
   /// 上传图片到对象存储后返回 url，供发送图片消息使用

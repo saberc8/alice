@@ -29,6 +29,23 @@ class _ConversationsPageState
   }
 
   void _openChat(Map<String, dynamic> item) {
+    if (item['type'] == 'group') {
+      final g = item['group'] as Map?;
+      if (g == null) return;
+      Navigator.of(context)
+          .pushNamed(
+            '/chat',
+            arguments: {
+              'group_id': g['id'],
+              'id': g['id'],
+              'is_group': true,
+              'nickname': g['name'] ?? '群聊',
+              'avatar': g['avatar'] ?? '',
+            },
+          )
+          .then((_) => reload());
+      return;
+    }
     final peerId = item['peer_id'];
     final peer = item['peer'] as Map?; // {id,nickname,avatar}
     Navigator.of(context)
@@ -53,13 +70,24 @@ class _ConversationsPageState
   Widget buildItem(BuildContext context, Map<String, dynamic> it, int index) {
     final last = (it['last_message'] as Map?)?.cast<String, dynamic>();
     final unread = (it['unread_count'] ?? 0) as int;
-    final peerId = it['peer_id'];
-    final peer = it['peer'] as Map?; // {id,nickname,avatar}
-    final avatar = peer != null ? peer['avatar'] as String? : null;
-    final nickname =
-        (peer != null && (peer['nickname'] as String?)?.isNotEmpty == true)
-            ? peer['nickname']
-            : '用户$peerId';
+    String? avatar;
+    String nickname;
+    if (it['type'] == 'group') {
+      final g = it['group'] as Map?;
+      avatar = g != null ? g['avatar'] as String? : null;
+      nickname =
+          (g != null && (g['name'] as String?)?.isNotEmpty == true)
+              ? g['name']
+              : '群聊';
+    } else {
+      final peerId = it['peer_id'];
+      final peer = it['peer'] as Map?; // {id,nickname,avatar}
+      avatar = peer != null ? peer['avatar'] as String? : null;
+      nickname =
+          (peer != null && (peer['nickname'] as String?)?.isNotEmpty == true)
+              ? peer['nickname']
+              : '用户$peerId';
+    }
     // 预览文案：图片/视频/链接使用占位符，不展示原始 URL
     String preview = '';
     if (last != null) {
@@ -116,11 +144,36 @@ class _ConversationsPageState
       appBar: WeAppBar(
         title: '小绿书',
         actions: [
-          IconButton(onPressed: reload, icon: const Icon(Icons.refresh)),
+          IconButton(onPressed: _showAddMenu, icon: const Icon(Icons.add)),
         ],
       ),
       body: super.build(context),
     );
+  }
+
+  void _showAddMenu() async {
+    final RenderBox box = context.findRenderObject() as RenderBox;
+    final offset = box.localToGlobal(Offset.zero);
+    final selected = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        offset.dx + box.size.width - 40,
+        offset.dy + kToolbarHeight + 8,
+        16,
+        0,
+      ),
+      items: const [
+        PopupMenuItem(value: 'group', child: Text('发起群聊')),
+        PopupMenuItem(value: 'add_friend', child: Text('添加朋友')),
+      ],
+    );
+    if (selected == 'group') {
+      Navigator.of(context).pushNamed('/create_group');
+    } else if (selected == 'add_friend') {
+      Navigator.of(
+        context,
+      ).pushNamed('/contacts'); // TODO: implement friend add flow
+    }
   }
 
   @override

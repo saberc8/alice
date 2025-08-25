@@ -25,6 +25,7 @@ var (
 	AppUserSvc appuserservice.AppUserService
 	FriendSvc  appfriendservice.FriendService
 	ChatSvc    chatservice.ChatService
+	GroupSvc   chatservice.GroupService
 	MomentSvc  momentservice.MomentService
 
 	// RBAC 服务实例
@@ -50,6 +51,7 @@ func Init(ctx context.Context, cfg *config.Config) error {
 	friendRepo := repository.NewFriendRepository(db)
 	momentRepo := repository.NewMomentRepository(db)
 	msgRepo := chatrepo.NewMessageRepository(db)
+	groupRepo := chatrepo.NewGroupRepository(db)
 
 	// 初始化RBAC仓储
 	roleRepo := repository.NewRoleRepository(db)
@@ -61,6 +63,7 @@ func Init(ctx context.Context, cfg *config.Config) error {
 	AppUserSvc = appuserservice.NewAppUserService(appUserRepo)
 	FriendSvc = appfriendservice.NewFriendService(appUserRepo, friendRepo)
 	ChatSvc = chatservice.NewChatService(msgRepo, friendRepo)
+	GroupSvc = chatservice.NewGroupService(groupRepo)
 	MomentSvc = momentservice.NewMomentService(momentRepo)
 
 	// 初始化RBAC服务

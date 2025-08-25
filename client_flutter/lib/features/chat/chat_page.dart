@@ -8,10 +8,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 import 'package:client_flutter/features/moments/ui/user_moment_list_page.dart';
+import 'package:client_flutter/features/chat/group_manage_page.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key, required this.peer});
-  final Map<String, dynamic> peer; // {id, email, nickname, avatar, bio}
+  final Map<String, dynamic>
+  peer; // {id, email, nickname, avatar, bio, group_id?, is_group?}
 
   @override
   State<ChatPage> createState() => _ChatPageState();
@@ -32,9 +34,22 @@ class _ChatPageState extends State<ChatPage> {
   String? _error;
   int _page = 1;
   bool _hasMore = true;
+  int? _selfId;
+
+  bool get _isGroup =>
+      widget.peer['is_group'] == true || widget.peer['group_id'] != null;
 
   int get _peerId {
+    // For private chat, original peer id
     final v = widget.peer['id'];
+    if (v is int) return v;
+    if (v is double) return v.toInt();
+    if (v is String) return int.tryParse(v) ?? 0;
+    return 0;
+  }
+
+  int get _groupId {
+    final v = widget.peer['group_id'];
     if (v is int) return v;
     if (v is double) return v.toInt();
     if (v is String) return int.tryParse(v) ?? 0;
@@ -56,17 +71,31 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> _init() async {
     try {
       // history first
-      final data = await _svc.getHistory(
-        peerId: _peerId,
-        page: 1,
-        pageSize: 20,
-      );
+      Map<String, dynamic> data;
+      if (_isGroup) {
+        data = await _svc.getGroupHistory(
+          groupId: _groupId,
+          page: 1,
+          pageSize: 20,
+        );
+      } else {
+        data = await _svc.getHistory(peerId: _peerId, page: 1, pageSize: 20);
+      }
       final items = (data['items'] as List?)?.cast<Map>() ?? [];
       _messages.addAll(items.cast<Map<String, dynamic>>().reversed);
-      final lastIncoming = _messages.where((m) => m['sender_id'] == _peerId);
-      if (lastIncoming.isNotEmpty) {
-        final bid = (lastIncoming.last['id'] as num?)?.toInt() ?? 0;
-        if (bid > 0) unawaited(_svc.markRead(peerId: _peerId, beforeId: bid));
+      _selfId = await _svc.selfId();
+      if (!_isGroup) {
+        final lastIncoming = _messages.where((m) => m['sender_id'] == _peerId);
+        if (lastIncoming.isNotEmpty) {
+          final bid = (lastIncoming.last['id'] as num?)?.toInt() ?? 0;
+          if (bid > 0) unawaited(_svc.markRead(peerId: _peerId, beforeId: bid));
+        }
+      } else {
+        // 群聊：进入时上报已读到当前最后一条
+        final last = _messages.isNotEmpty ? _messages.last : null;
+        final lastId = (last?['id'] as num?)?.toInt() ?? 0;
+        if (lastId > 0)
+          unawaited(_svc.markGroupRead(groupId: _groupId, beforeMsgId: lastId));
       }
 
       final (stream, sink, close) = _svc.connect();
@@ -75,6 +104,26 @@ class _ChatPageState extends State<ChatPage> {
       _sub = stream.listen(
         (event) {
           // Only append messages that belong to this conversation
+          if (_isGroup) {
+            final gid = event['group_id'];
+            if (gid != null && gid == _groupId) {
+              setState(() => _messages.add(event));
+              // 收到群消息如果是他人发的并且在底部，推进已读
+              final sid = (event['sender_id'] as num?)?.toInt();
+              if (sid != null && sid != _selfId) {
+                final mid = (event['message_id'] ?? event['id']) as num?;
+                if (mid != null) {
+                  unawaited(
+                    _svc.markGroupRead(
+                      groupId: _groupId,
+                      beforeMsgId: mid.toInt(),
+                    ),
+                  );
+                }
+              }
+            }
+            return;
+          }
           final sid = event['sender_id'];
           final rid = event['receiver_id'];
           if (sid == _peerId || rid == _peerId) {
@@ -107,11 +156,18 @@ class _ChatPageState extends State<ChatPage> {
     try {
       final prevMaxExtent =
           _scrollCtrl.hasClients ? _scrollCtrl.position.maxScrollExtent : null;
-      final data = await _svc.getHistory(
-        peerId: _peerId,
-        page: next,
-        pageSize: 20,
-      );
+      final data =
+          _isGroup
+              ? await _svc.getGroupHistory(
+                groupId: _groupId,
+                page: next,
+                pageSize: 20,
+              )
+              : await _svc.getHistory(
+                peerId: _peerId,
+                page: next,
+                pageSize: 20,
+              );
       final items = (data['items'] as List?)?.cast<Map>() ?? [];
       if (items.isEmpty) {
         setState(() => _hasMore = false);
@@ -137,7 +193,11 @@ class _ChatPageState extends State<ChatPage> {
   void _sendTextByIME() {
     final text = _msgCtrl.text.trim();
     if (text.isEmpty || _sink == null) return;
-    _sink!.add({'type': 'text', 'to': _peerId, 'content': text});
+    if (_isGroup) {
+      _sink!.add({'type': 'text', 'group_id': _groupId, 'content': text});
+    } else {
+      _sink!.add({'type': 'text', 'to': _peerId, 'content': text});
+    }
     _msgCtrl.clear();
     // 发送后稍后滚动到底部
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
@@ -153,7 +213,11 @@ class _ChatPageState extends State<ChatPage> {
       if (img == null) return;
       final url = await _svc.uploadImage(img.path);
       if (url == null || _sink == null) return;
-      _sink!.add({'type': 'image', 'to': _peerId, 'content': url});
+      if (_isGroup) {
+        _sink!.add({'type': 'image', 'group_id': _groupId, 'content': url});
+      } else {
+        _sink!.add({'type': 'image', 'to': _peerId, 'content': url});
+      }
     } catch (e) {
       if (mounted)
         ScaffoldMessenger.of(
@@ -172,7 +236,11 @@ class _ChatPageState extends State<ChatPage> {
       if (vid == null) return;
       final url = await _svc.uploadVideo(vid.path);
       if (url == null || _sink == null) return;
-      _sink!.add({'type': 'video', 'to': _peerId, 'content': url});
+      if (_isGroup) {
+        _sink!.add({'type': 'video', 'group_id': _groupId, 'content': url});
+      } else {
+        _sink!.add({'type': 'video', 'to': _peerId, 'content': url});
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -219,7 +287,11 @@ class _ChatPageState extends State<ChatPage> {
         ).showSnackBar(const SnackBar(content: Text('链接格式不正确')));
       return;
     }
-    _sink!.add({'type': 'link', 'to': _peerId, 'content': url});
+    if (_isGroup) {
+      _sink!.add({'type': 'link', 'group_id': _groupId, 'content': url});
+    } else {
+      _sink!.add({'type': 'link', 'to': _peerId, 'content': url});
+    }
   }
 
   void _toggleEmojiPanel() {
@@ -320,6 +392,25 @@ class _ChatPageState extends State<ChatPage> {
             Text(_title),
           ],
         ),
+        actions: [
+          if (_isGroup)
+            IconButton(
+              icon: const Icon(Icons.group_outlined),
+              tooltip: '群管理',
+              onPressed: () async {
+                // 跳转群管理页（后续实现详细页面）
+                final group = widget.peer;
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => GroupManagePage(group: group),
+                  ),
+                );
+                // 返回后可选择刷新群成员/资料
+                setState(() {});
+              },
+            ),
+        ],
       ),
       body: Column(
         children: [
@@ -346,16 +437,15 @@ class _ChatPageState extends State<ChatPage> {
                         itemCount: _messages.length,
                         itemBuilder: (ctx, i) {
                           final m = _messages[i];
-                          final isMe =
-                              m['receiver_id'] == _peerId ? true : false;
+                          // 判定是否我发出：优先 sender_id == selfId
+                          final senderId = (m['sender_id'] as num?)?.toInt();
+                          final isMe = senderId != null && senderId == _selfId;
                           // In absence of my id, infer by receiver_id equals peer
                           final type = m['type']?.toString() ?? 'text';
                           final sender =
                               (m['sender'] as Map?)?.cast<String, dynamic>();
-                          final avatarUrl =
-                              isMe
-                                  ? (sender?['avatar'] as String? ?? '')
-                                  : (sender?['avatar'] as String? ?? '');
+                          final avatarUrl = sender?['avatar'] as String? ?? '';
+                          final nickname = sender?['nickname'] as String? ?? '';
                           Widget contentWidget;
                           if (type == 'image') {
                             final url = m['content']?.toString() ?? '';
@@ -429,19 +519,46 @@ class _ChatPageState extends State<ChatPage> {
                                   _AvatarButton(url: avatarUrl, user: sender),
                                 if (!isMe) const SizedBox(width: 6),
                                 Flexible(
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 8,
-                                      horizontal: 12,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          isMe
-                                              ? WeColors.bubbleMe
-                                              : WeColors.bubbleOther,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: contentWidget,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        isMe
+                                            ? CrossAxisAlignment.end
+                                            : CrossAxisAlignment.start,
+                                    children: [
+                                      if (_isGroup &&
+                                          !isMe &&
+                                          nickname.isNotEmpty)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            left: 4,
+                                            right: 4,
+                                            bottom: 2,
+                                          ),
+                                          child: Text(
+                                            nickname,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.black45,
+                                            ),
+                                          ),
+                                        ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8,
+                                          horizontal: 12,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              isMe
+                                                  ? WeColors.bubbleMe
+                                                  : WeColors.bubbleOther,
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        child: contentWidget,
+                                      ),
+                                    ],
                                   ),
                                 ),
                                 if (isMe) const SizedBox(width: 6),

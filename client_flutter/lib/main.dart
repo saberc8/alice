@@ -6,6 +6,7 @@ import 'package:client_flutter/features/auth/login_page.dart';
 import 'package:client_flutter/features/home/home_tabs.dart';
 import 'package:client_flutter/core/auth/token_store.dart';
 import 'package:client_flutter/features/chat/chat_page.dart';
+import 'package:client_flutter/features/chat/create_group_page.dart';
 import 'package:client_flutter/features/contacts/friend_profile_page.dart';
 import 'package:client_flutter/core/state/app_providers.dart';
 
@@ -61,6 +62,12 @@ class _MyAppState extends State<MyApp> {
           final user = settings.arguments as Map<String, dynamic>;
           return MaterialPageRoute(
             builder: (_) => ChatPage(peer: user),
+            settings: settings,
+          );
+        }
+        if (settings.name == '/create_group') {
+          return MaterialPageRoute(
+            builder: (_) => const CreateGroupPage(),
             settings: settings,
           );
         }
