@@ -4,7 +4,7 @@ import ProTable from '@/components/protable/ProTable.vue'
 import type { ProColumn } from '@/components/protable/types'
 import { listRoles, createRole, updateRole, deleteRole, type RoleItem } from '@/api/role'
 import { listPermissions, getRolePermissions, assignPermissionsToRole, removePermissionsFromRole, type PermissionItem } from '@/api/permission'
-import { getRoleMenusTree, type MenuItem } from '@/api/menu'
+import { getRoleMenusTree, type MenuItem, getMenuTree, getRoleMenus, assignMenusToRole, removeMenusFromRole } from '@/api/menu'
 
 // 状态选项
 const statusOptions = [
@@ -142,6 +142,59 @@ function renderMenuTree(nodes: MenuItem[]): any[] {
     children: n.children ? renderMenuTree(n.children) : undefined
   }))
 }
+
+// ===== 菜单绑定抽屉状态 =====
+const menuBindDrawerVisible = ref(false)
+const menuTreeData = ref<MenuItem[]>([])
+const checkedMenuIds = ref<(string|number)[]>([])
+const originalMenuIds = ref<Set<number>>(new Set())
+const loadingMenuBind = ref(false)
+
+async function openMenuBindDrawer(record: RoleItem) {
+  currentRole.value = record
+  menuBindDrawerVisible.value = true
+  loadingMenuBind.value = true
+  try {
+    const [allTree, ownedFlat] = await Promise.all([
+      getMenuTree(),
+      getRoleMenus(String(record.id)),
+    ])
+    menuTreeData.value = allTree
+    originalMenuIds.value = new Set(ownedFlat.map(m => Number(m.id)))
+    checkedMenuIds.value = [...originalMenuIds.value]
+  } finally {
+    loadingMenuBind.value = false
+  }
+}
+
+function extractAllIds(nodes: MenuItem[]): number[] {
+  const res: number[] = []
+  const walk = (arr: MenuItem[]) => {
+    arr.forEach(n => {
+      res.push(Number(n.id))
+      if (n.children && n.children.length) walk(n.children)
+    })
+  }
+  walk(nodes)
+  return res
+}
+
+async function saveRoleMenus() {
+  if (!currentRole.value) return
+  loadingMenuBind.value = true
+  try {
+    const current = new Set(checkedMenuIds.value.map(id => Number(id)))
+    const toAdd: number[] = []
+    const toRemove: number[] = []
+    current.forEach(id => { if (!originalMenuIds.value.has(id)) toAdd.push(id) })
+    originalMenuIds.value.forEach(id => { if (!current.has(id)) toRemove.push(id) })
+    if (toAdd.length) await assignMenusToRole(String(currentRole.value.id), toAdd)
+    if (toRemove.length) await removeMenusFromRole(String(currentRole.value.id), toRemove)
+    menuBindDrawerVisible.value = false
+  } finally {
+    loadingMenuBind.value = false
+  }
+}
 </script>
 
 <template>
@@ -158,11 +211,13 @@ function renderMenuTree(nodes: MenuItem[]): any[] {
     <template #actions="{ record }">
       <a-space>
         <a-button size="mini" @click="openPermDrawer(record)">权限</a-button>
+        <a-button size="mini" type="outline" @click="openMenuBindDrawer(record)">菜单</a-button>
       </a-space>
     </template>
   </ProTable>
 
-  <a-drawer :visible="permDrawerVisible" width="640" :title="(currentRole?.name || '') + ' - 权限分配'" @cancel="permDrawerVisible=false">
+  <!-- 权限分配抽屉 -->
+  <a-drawer :visible="permDrawerVisible" :width="640" :title="(currentRole?.name || '') + ' - 权限分配'" @cancel="permDrawerVisible=false">
     <template #footer>
       <a-space>
         <a-button @click="permDrawerVisible=false" :disabled="saving">取消</a-button>
@@ -171,7 +226,7 @@ function renderMenuTree(nodes: MenuItem[]): any[] {
     </template>
     <a-spin :loading="permLoading">
       <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;">
-              <a-button size="mini" status="warning" @click="openRoleMenuTree(record)">菜单树</a-button>
+        <a-button size="mini" status="warning" @click="openRoleMenuTree(currentRole!)" :disabled="!currentRole">菜单树</a-button>
         <a-input v-model="searchPermKey" placeholder="搜索名称或代码" allow-clear style="flex:1;" />
         <a-tag color="arcoblue">共 {{ allPermissions.length }} 条</a-tag>
       </div>
@@ -190,6 +245,30 @@ function renderMenuTree(nodes: MenuItem[]): any[] {
           </a-space>
         </a-checkbox-group>
       </div>
+    </a-spin>
+  </a-drawer>
+
+  <!-- 菜单绑定抽屉 -->
+  <a-drawer :visible="menuBindDrawerVisible" :width="680" :title="(currentRole?.name||'') + ' - 菜单绑定'" @cancel="menuBindDrawerVisible=false">
+    <template #footer>
+      <a-space>
+        <a-button @click="menuBindDrawerVisible=false" :disabled="loadingMenuBind">取消</a-button>
+        <a-button type="primary" @click="saveRoleMenus" :loading="loadingMenuBind">保存</a-button>
+      </a-space>
+    </template>
+    <a-spin :loading="loadingMenuBind">
+      <a-space style="margin-bottom:8px;" wrap>
+  <a-button size="mini" @click="() => { checkedMenuIds.value = extractAllIds(menuTreeData.value) }">全选</a-button>
+  <a-button size="mini" @click="() => { checkedMenuIds.value = [] }">清空</a-button>
+      </a-space>
+      <a-tree
+        :data="menuTreeData"
+        checkable
+        v-model:checked-keys="checkedMenuIds"
+        :field-names="{ key: 'id', title: 'name', children: 'children' }"
+        :default-expand-all="true"
+        style="max-height:70vh;overflow:auto;border:1px solid var(--color-border-2);padding:8px;border-radius:6px;"
+      />
     </a-spin>
   </a-drawer>
 </template>

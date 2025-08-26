@@ -25,6 +25,15 @@ export function getRoleMenus(roleId: string) {
   return http.get<MenuItem[]>(`/roles/${roleId}/menus`)
 }
 
+// 角色菜单绑定
+export function assignMenusToRole(roleId: string, menuIds: Array<string | number>) {
+  return http.post(`/roles/${roleId}/menus`, { menu_ids: menuIds.map(id => Number(id)) })
+}
+
+export function removeMenusFromRole(roleId: string, menuIds: Array<string | number>) {
+  return http.delete(`/roles/${roleId}/menus`, { data: { menu_ids: menuIds.map(id => Number(id)) } })
+}
+
 // ---- CRUD for menus ----
 export function listMenus() {
   return http.get<MenuItem[]>(`/menus`)

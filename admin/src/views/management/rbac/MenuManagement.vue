@@ -226,7 +226,7 @@ const reloadKey = ref(0)
   </ProTable>
 
   <!-- 权限抽屉 -->
-  <a-drawer :visible="permDrawerVisible" @cancel="permDrawerVisible=false" :title="currentMenu?.name + ' - 权限管理'" width="520">
+  <a-drawer :visible="permDrawerVisible" @cancel="permDrawerVisible=false" :title="currentMenu?.name + ' - 权限管理'" :width="640">
     <template #footer>
       <a-space>
         <a-button @click="permDrawerVisible=false">关闭</a-button>
