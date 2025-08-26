@@ -101,6 +101,9 @@ const routes: RouteRecordRaw[] = [
 	{ path: '/:pathMatch(.*)*', redirect: '/' },
 ]
 
+// 记录首次进入时浏览器地址（用于动态路由注册后还原）
+const initialFullPath = window.location.pathname + window.location.search + window.location.hash
+
 const router = createRouter({
 	history: createWebHistory(),
 	routes,
@@ -127,6 +130,21 @@ router.beforeEach(async (to, _from, next) => {
 					const dynamicChildren = buildRoutesFromMenuTree(menu.tree)
 					dynamicChildren.forEach((r) => router.addRoute('Root', r))
 					menu.routesRegistered = true
+				}
+			}
+			// 首次刷新：如果最初请求的路径在动态路由注册后已存在，且当前路由（可能已被重定向到默认页）不同，则还原
+			if ((menu as any).initialNavigationDone !== true) {
+				(menu as any).initialNavigationDone = true
+				// 排除登录页与初始就是当前页的情况
+				if (
+					initialFullPath &&
+					initialFullPath !== '/login' &&
+					initialFullPath !== router.currentRoute.value.fullPath
+				) {
+					const resolved = router.resolve(initialFullPath)
+					if (resolved.matched.length) {
+						return next({ path: initialFullPath, replace: true })
+					}
 				}
 			}
 		} catch (e) {
