@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, h } from 'vue'
 import ProTable from '@/components/protable/ProTable.vue'
 import type { ProColumn } from '@/components/protable/types'
 import { listRoles, createRole, updateRole, deleteRole, type RoleItem } from '@/api/role'
+import { listPermissions, getRolePermissions, assignPermissionsToRole, removePermissionsFromRole, type PermissionItem } from '@/api/permission'
+import { getRoleMenusTree, type MenuItem } from '@/api/menu'
 
 // 状态选项
 const statusOptions = [
@@ -28,8 +30,8 @@ const columns = ref<ProColumn<RoleItem>[]>([
 
 // request 适配 ProTable 返回 { list, total }
 async function request(params: any) {
-  const { page = 1, page_size = 10 } = params
-  const res = await listRoles({ page, page_size })
+  const { page = 1, page_size = 10, name, code, status } = params
+  const res = await listRoles({ page, page_size, name, code, status })
   return { list: res.items, total: res.total }
 }
 
@@ -44,7 +46,7 @@ async function onCreate(values: Partial<RoleItem>) {
   })
 }
 
-async function onUpdate(id: string, values: Partial<RoleItem>) {
+async function onUpdate(id: number, values: Partial<RoleItem>) {
   if (!values.name || !values.code) throw new Error('缺少必填项')
   return updateRole(id, {
     name: values.name,
@@ -54,11 +56,92 @@ async function onUpdate(id: string, values: Partial<RoleItem>) {
   })
 }
 
-async function onDeleteRow(id: string) {
+async function onDeleteRow(id: number) {
   return deleteRole(id)
 }
 
 const title = computed(() => '角色管理')
+
+// ===== 权限分配抽屉状态 =====
+const permDrawerVisible = ref(false)
+const currentRole = ref<RoleItem | null>(null)
+const allPermissions = ref<PermissionItem[]>([])
+const rolePermissionIds = ref<number[]>([])
+const selectedPermissionIds = ref<number[]>([])
+const permLoading = ref(false)
+const saving = ref(false)
+
+async function openPermDrawer(record: RoleItem) {
+  currentRole.value = record
+  permDrawerVisible.value = true
+  permLoading.value = true
+  try {
+    const [all, owned] = await Promise.all([
+      listPermissions({ page: 1, page_size: 2000 }),
+      getRolePermissions(String(record.id)),
+    ])
+    allPermissions.value = all.items
+    rolePermissionIds.value = owned.map(p => p.id)
+    selectedPermissionIds.value = [...rolePermissionIds.value]
+  } finally {
+    permLoading.value = false
+  }
+}
+
+async function saveRolePermissions() {
+  if (!currentRole.value) return
+  saving.value = true
+  try {
+    const original = new Set(rolePermissionIds.value)
+    const current = new Set(selectedPermissionIds.value)
+    const toAdd: number[] = []
+    const toRemove: number[] = []
+    current.forEach(id => { if (!original.has(id)) toAdd.push(id) })
+    original.forEach(id => { if (!current.has(id)) toRemove.push(id) })
+    if (toAdd.length) await assignPermissionsToRole(String(currentRole.value.id), toAdd)
+    if (toRemove.length) await removePermissionsFromRole(String(currentRole.value.id), toRemove)
+    permDrawerVisible.value = false
+  } finally {
+    saving.value = false
+  }
+}
+
+function filterPermissions(keyword: string) {
+  if (!keyword) return allPermissions.value
+  const k = keyword.toLowerCase()
+  return allPermissions.value.filter(p => p.name.toLowerCase().includes(k) || p.code.toLowerCase().includes(k))
+}
+
+const searchPermKey = ref('')
+const displayedPermissions = computed(() => filterPermissions(searchPermKey.value))
+
+// ===== 角色菜单树展示 =====
+const menuTreeDrawerVisible = ref(false)
+const roleMenuTree = ref<MenuItem[]>([])
+const loadingMenuTree = ref(false)
+
+async function openRoleMenuTree(record: RoleItem) {
+  currentRole.value = record
+  menuTreeDrawerVisible.value = true
+  loadingMenuTree.value = true
+  try {
+    roleMenuTree.value = await getRoleMenusTree(String(record.id))
+  } finally {
+    loadingMenuTree.value = false
+  }
+}
+
+function renderMenuTree(nodes: MenuItem[]): any[] {
+  return (nodes || []).map(n => ({
+    key: n.id,
+    title: () => h('div', { style: 'display:flex;align-items:center;gap:6px;' }, [
+      h('span', n.name),
+      (n.meta && n.meta.perms && n.meta.perms.length) ? h('span', { style: 'display:flex;gap:4px;flex-wrap:wrap;' }, n.meta.perms.slice(0,3).map(p=>h('span',{ class:'perm-chip'}, p))) : null,
+      (n.meta && n.meta.perms && n.meta.perms.length > 3) ? h('span', { class:'perm-more' }, '+'+(n.meta.perms.length-3)) : null
+    ]),
+    children: n.children ? renderMenuTree(n.children) : undefined
+  }))
+}
 </script>
 
 <template>
@@ -71,5 +154,42 @@ const title = computed(() => '角色管理')
     :on-update="onUpdate"
     :on-delete="onDeleteRow"
     :pagination="true"
-  />
+  >
+    <template #actions="{ record }">
+      <a-space>
+        <a-button size="mini" @click="openPermDrawer(record)">权限</a-button>
+      </a-space>
+    </template>
+  </ProTable>
+
+  <a-drawer :visible="permDrawerVisible" width="640" :title="(currentRole?.name || '') + ' - 权限分配'" @cancel="permDrawerVisible=false">
+    <template #footer>
+      <a-space>
+        <a-button @click="permDrawerVisible=false" :disabled="saving">取消</a-button>
+        <a-button type="primary" @click="saveRolePermissions" :loading="saving">保存</a-button>
+      </a-space>
+    </template>
+    <a-spin :loading="permLoading">
+      <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;">
+              <a-button size="mini" status="warning" @click="openRoleMenuTree(record)">菜单树</a-button>
+        <a-input v-model="searchPermKey" placeholder="搜索名称或代码" allow-clear style="flex:1;" />
+        <a-tag color="arcoblue">共 {{ allPermissions.length }} 条</a-tag>
+      </div>
+      <div style="max-height:480px;overflow:auto;border:1px solid var(--color-border-2);padding:12px;border-radius:6px;">
+        <a-checkbox-group v-model="selectedPermissionIds">
+          <a-space direction="vertical" :size="4" fill>
+            <template v-for="p in displayedPermissions" :key="p.id">
+              <a-checkbox :value="p.id">
+                <a-space size="mini">
+                  <span style="font-weight:500">{{ p.name }}</span>
+                  <a-tag size="small" color="gray">{{ p.code }}</a-tag>
+                  <span style="color:var(--color-text-3);font-size:12px;">{{ p.resource }}/{{ p.action }}</span>
+                </a-space>
+              </a-checkbox>
+            </template>
+          </a-space>
+        </a-checkbox-group>
+      </div>
+    </a-spin>
+  </a-drawer>
 </template>

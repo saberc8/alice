@@ -71,6 +71,32 @@ func (r *roleRepositoryImpl) List(ctx context.Context, offset, limit int) ([]*en
 	return roles, total, err
 }
 
+// Search 条件筛选角色
+func (r *roleRepositoryImpl) Search(ctx context.Context, offset, limit int, name, code string, status *entity.RoleStatus) ([]*entity.Role, int64, error) {
+	var roles []*entity.Role
+	var total int64
+
+	dbq := r.db.WithContext(ctx).Model(&entity.Role{})
+	if name != "" {
+		dbq = dbq.Where("name LIKE ?", "%"+name+"%")
+	}
+	if code != "" {
+		dbq = dbq.Where("code LIKE ?", "%"+code+"%")
+	}
+	if status != nil && *status != "" {
+		dbq = dbq.Where("status = ?", *status)
+	}
+
+	if err := dbq.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if err := dbq.Offset(offset).Limit(limit).Order("created_at DESC").Find(&roles).Error; err != nil {
+		return nil, 0, err
+	}
+	return roles, total, nil
+}
+
 // Update 更新角色
 func (r *roleRepositoryImpl) Update(ctx context.Context, role *entity.Role) error {
 	return r.db.WithContext(ctx).Save(role).Error

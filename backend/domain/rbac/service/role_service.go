@@ -54,8 +54,11 @@ type UpdateRoleRequest struct {
 
 // ListRolesRequest 角色列表请求
 type ListRolesRequest struct {
-	Page     int `json:"page" validate:"min=1"`
-	PageSize int `json:"page_size" validate:"min=1,max=100"`
+	Page     int                `json:"page" validate:"min=1"`
+	PageSize int                `json:"page_size" validate:"min=1,max=100"`
+	Name     string             `json:"name,omitempty"`
+	Code     string             `json:"code,omitempty"`
+	Status   *entity.RoleStatus `json:"status,omitempty"`
 }
 
 // ListRolesResponse 角色列表响应
@@ -126,7 +129,18 @@ func (s *roleService) GetRole(ctx context.Context, id uint) (*entity.Role, error
 func (s *roleService) ListRoles(ctx context.Context, req *ListRolesRequest) (*ListRolesResponse, error) {
 	offset := (req.Page - 1) * req.PageSize
 
-	roles, total, err := s.roleRepo.List(ctx, offset, req.PageSize)
+	var (
+		roles []*entity.Role
+		total int64
+		err   error
+	)
+
+	// 如果存在过滤条件则使用 Search
+	if req.Name != "" || req.Code != "" || req.Status != nil {
+		roles, total, err = s.roleRepo.Search(ctx, offset, req.PageSize, req.Name, req.Code, req.Status)
+	} else {
+		roles, total, err = s.roleRepo.List(ctx, offset, req.PageSize)
+	}
 	if err != nil {
 		logger.Errorf("获取角色列表失败: %v", err)
 		return nil, fmt.Errorf("获取角色列表失败: %w", err)

@@ -2,7 +2,7 @@ import http from './http'
 
 // ===== 类型定义 =====
 export interface RoleItem {
-  id: string
+  id: number
   name: string
   code: string
   description?: string | null
@@ -22,6 +22,9 @@ export interface RoleListResult {
 export interface ListRoleParams {
   page?: number
   page_size?: number
+  name?: string
+  code?: string
+  status?: string
 }
 
 export function listRoles(params: ListRoleParams) {
@@ -40,7 +43,7 @@ export function createRole(data: CreateRolePayload) {
 }
 
 // ===== 详情 =====
-export function getRole(id: string) {
+export function getRole(id: number) {
   return http.get<RoleItem>(`/roles/${id}`)
 }
 
@@ -51,12 +54,12 @@ export interface UpdateRolePayload {
   description?: string | null
   status?: string
 }
-export function updateRole(id: string, data: UpdateRolePayload) {
+export function updateRole(id: number, data: UpdateRolePayload) {
   return http.put(`/roles/${id}`, data)
 }
 
 // ===== 删除 =====
-export function deleteRole(id: string) {
+export function deleteRole(id: number) {
   return http.delete(`/roles/${id}`)
 }
 

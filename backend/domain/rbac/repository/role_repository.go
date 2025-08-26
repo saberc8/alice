@@ -19,6 +19,9 @@ type RoleRepository interface {
 	// List 获取角色列表
 	List(ctx context.Context, offset, limit int) ([]*entity.Role, int64, error)
 
+	// Search 按条件筛选角色列表（名称/代码/状态 支持模糊匹配名称与代码）
+	Search(ctx context.Context, offset, limit int, name, code string, status *entity.RoleStatus) ([]*entity.Role, int64, error)
+
 	// Update 更新角色
 	Update(ctx context.Context, role *entity.Role) error
 

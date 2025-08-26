@@ -70,6 +70,8 @@ func SetupRBACRoutes(
 		menus.GET("/tree", middleware.RequirePerm(application.PermissionSvc, "system:menu:list"), menuHandler.GetMenuTree)
 		menus.PUT("/:id", middleware.RequirePerm(application.PermissionSvc, "system:menu:update"), menuHandler.UpdateMenu)
 		menus.DELETE("/:id", middleware.RequirePerm(application.PermissionSvc, "system:menu:delete"), menuHandler.DeleteMenu)
+		menus.GET("/:id/permissions", middleware.RequirePerm(application.PermissionSvc, "system:menu:list"), menuHandler.ListMenuPermissions)
+		menus.POST("/:id/permissions", middleware.RequirePerm(application.PermissionSvc, "system:permission:create"), menuHandler.CreateMenuPermission)
 	}
 
 	// 角色菜单管理路由

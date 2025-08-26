@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"alice/api/model"
+	"alice/domain/rbac/entity"
 	"alice/domain/rbac/service"
 	"alice/pkg/logger"
 
@@ -99,6 +100,14 @@ func (h *RoleHandler) GetRole(c *gin.Context) {
 func (h *RoleHandler) ListRoles(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+	name := c.Query("name")
+	code := c.Query("code")
+	statusStr := c.Query("status")
+	var statusPtr *entity.RoleStatus
+	if statusStr != "" {
+		st := entity.RoleStatus(statusStr)
+		statusPtr = &st
+	}
 
 	if page < 1 {
 		page = 1
@@ -110,6 +119,9 @@ func (h *RoleHandler) ListRoles(c *gin.Context) {
 	req := &service.ListRolesRequest{
 		Page:     page,
 		PageSize: pageSize,
+		Name:     name,
+		Code:     code,
+		Status:   statusPtr,
 	}
 
 	result, err := h.roleService.ListRoles(c.Request.Context(), req)

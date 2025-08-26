@@ -147,6 +147,7 @@ const formColumns = computed(() => safeColumns.value.filter((c) => (c as any).fo
         <a-table-column title="操作" :width="200" v-if="props.onUpdate || props.onDelete">
           <template #cell="{ record }">
             <a-space>
+              <slot name="actions" :record="record"></slot>
               <a-button v-if="props.onUpdate" size="mini" @click="openEdit(record)">编辑</a-button>
               <a-popconfirm v-if="props.onDelete" content="确定删除该项？" type="warning" @ok="() => onDelete(record)">
                 <a-button size="mini" status="danger">删除</a-button>

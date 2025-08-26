@@ -103,8 +103,12 @@ func (h *PermissionHandler) ListPermissions(c *gin.Context) {
 	if page < 1 {
 		page = 1
 	}
-	if pageSize < 1 || pageSize > 100 {
+	// 放宽最大分页大小（业务需要一次性获取全部权限用于前端筛选），上限 2000，超过则截断到上限
+	const MaxPageSize = 2000
+	if pageSize < 1 {
 		pageSize = 10
+	} else if pageSize > MaxPageSize {
+		pageSize = MaxPageSize
 	}
 
 	req := &service.ListPermissionsRequest{

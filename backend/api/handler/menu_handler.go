@@ -13,13 +13,15 @@ import (
 
 // MenuHandler 菜单处理器
 type MenuHandler struct {
-	menuService service.MenuService
+	menuService       service.MenuService
+	permissionService service.PermissionService
 }
 
 // NewMenuHandler 创建菜单处理器
-func NewMenuHandler(menuService service.MenuService) *MenuHandler {
+func NewMenuHandler(menuService service.MenuService, permissionService service.PermissionService) *MenuHandler {
 	return &MenuHandler{
-		menuService: menuService,
+		menuService:       menuService,
+		permissionService: permissionService,
 	}
 }
 
@@ -411,4 +413,76 @@ func (h *MenuHandler) GetRoleMenuTree(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, model.SuccessResponse(tree))
+}
+
+// ListMenuPermissions 列出某菜单绑定的权限
+// @Summary 菜单权限列表
+// @Description 获取某菜单下所有权限（不分页）
+// @Tags Menus
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "菜单ID"
+// @Success 200 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /menus/{id}/permissions [get]
+func (h *MenuHandler) ListMenuPermissions(c *gin.Context) {
+	idStr := c.Param("id")
+	if idStr == "" {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "菜单ID不能为空"))
+		return
+	}
+	idVal, errConv := strconv.ParseUint(idStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "菜单ID格式错误"))
+		return
+	}
+	perms, err := h.permissionService.ListByMenuID(c.Request.Context(), uint(idVal))
+	if err != nil {
+		logger.Errorf("获取菜单权限失败: %v", err)
+		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, model.SuccessResponse(perms))
+}
+
+// CreateMenuPermission 在某菜单下创建权限（自动绑定 MenuID）
+// @Summary 在菜单下创建权限
+// @Description 创建权限并绑定到指定菜单
+// @Tags Menus
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "菜单ID"
+// @Param request body service.CreatePermissionRequest true "创建权限请求 (无需填 menu_id)"
+// @Success 201 {object} model.APIResponse
+// @Failure 400 {object} model.APIResponse
+// @Failure 500 {object} model.APIResponse
+// @Router /menus/{id}/permissions [post]
+func (h *MenuHandler) CreateMenuPermission(c *gin.Context) {
+	idStr := c.Param("id")
+	if idStr == "" {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "菜单ID不能为空"))
+		return
+	}
+	idVal, errConv := strconv.ParseUint(idStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "菜单ID格式错误"))
+		return
+	}
+	var req service.CreatePermissionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		logger.Errorf("绑定请求参数失败: %v", err)
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "请求参数格式错误"))
+		return
+	}
+	mid := uint(idVal)
+	req.MenuID = &mid
+	perm, err := h.permissionService.CreatePermission(c.Request.Context(), &req)
+	if err != nil {
+		logger.Errorf("创建菜单权限失败: %v", err)
+		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))
+		return
+	}
+	c.JSON(http.StatusCreated, model.SuccessResponse(perm))
 }

@@ -51,7 +51,7 @@ func main() {
 	appUserHandler := handler.NewAppUserHandler(application.AppUserSvc, application.FriendSvc)
 	roleHandler := handler.NewRoleHandler(application.RoleSvc)
 	permissionHandler := handler.NewPermissionHandler(application.PermissionSvc)
-	menuHandler := handler.NewMenuHandler(application.MenuSvc)
+	menuHandler := handler.NewMenuHandler(application.MenuSvc, application.PermissionSvc)
 
 	// 初始化路由
 	apiRouter := router.NewRouter(userHandler, appUserHandler, roleHandler, permissionHandler, menuHandler)

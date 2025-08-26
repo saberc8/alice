@@ -42,6 +42,9 @@ type PermissionService interface {
 
 	// CheckUserPermissionByCode 基于权限码检查用户是否有权限
 	CheckUserPermissionByCode(ctx context.Context, userID uint, code string) (bool, error)
+
+	// ListByMenuID 根据菜单ID列出权限（不分页）
+	ListByMenuID(ctx context.Context, menuID uint) ([]*entity.Permission, error)
 }
 
 // CreatePermissionRequest 创建权限请求
@@ -69,8 +72,9 @@ type UpdatePermissionRequest struct {
 
 // ListPermissionsRequest 权限列表请求
 type ListPermissionsRequest struct {
-	Page     int `json:"page" validate:"min=1"`
-	PageSize int `json:"page_size" validate:"min=1,max=100"`
+	Page int `json:"page" validate:"min=1"`
+	// PageSize 允许最大 2000（前端需要一次拉取全部权限用于本地筛选/分组展示）
+	PageSize int `json:"page_size" validate:"min=1,max=2000"`
 }
 
 // ListPermissionsResponse 权限列表响应
@@ -278,4 +282,14 @@ func (s *permissionService) CheckUserPermissionByCode(ctx context.Context, userI
 		return false, fmt.Errorf("按权限码检查用户权限失败: %w", err)
 	}
 	return hasPermission, nil
+}
+
+// ListByMenuID 根据菜单ID列出权限（不分页）
+func (s *permissionService) ListByMenuID(ctx context.Context, menuID uint) ([]*entity.Permission, error) {
+	perms, err := s.permissionRepo.GetByMenuIDs(ctx, []uint{menuID})
+	if err != nil {
+		logger.Errorf("获取菜单权限失败: %v", err)
+		return nil, fmt.Errorf("获取菜单权限失败: %w", err)
+	}
+	return perms, nil
 }
