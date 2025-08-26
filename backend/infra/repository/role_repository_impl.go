@@ -26,7 +26,7 @@ func (r *roleRepositoryImpl) Create(ctx context.Context, role *entity.Role) erro
 }
 
 // GetByID 根据ID获取角色
-func (r *roleRepositoryImpl) GetByID(ctx context.Context, id string) (*entity.Role, error) {
+func (r *roleRepositoryImpl) GetByID(ctx context.Context, id uint) (*entity.Role, error) {
 	var role entity.Role
 	err := r.db.WithContext(ctx).Where("id = ?", id).First(&role).Error
 	if err != nil {
@@ -77,7 +77,7 @@ func (r *roleRepositoryImpl) Update(ctx context.Context, role *entity.Role) erro
 }
 
 // Delete 删除角色
-func (r *roleRepositoryImpl) Delete(ctx context.Context, id string) error {
+func (r *roleRepositoryImpl) Delete(ctx context.Context, id uint) error {
 	// 开启事务
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 删除用户角色关联
@@ -101,7 +101,7 @@ func (r *roleRepositoryImpl) Delete(ctx context.Context, id string) error {
 }
 
 // GetByUserID 根据用户ID获取角色列表
-func (r *roleRepositoryImpl) GetByUserID(ctx context.Context, userID string) ([]*entity.Role, error) {
+func (r *roleRepositoryImpl) GetByUserID(ctx context.Context, userID uint) ([]*entity.Role, error) {
 	var roles []*entity.Role
 
 	err := r.db.WithContext(ctx).
@@ -115,7 +115,7 @@ func (r *roleRepositoryImpl) GetByUserID(ctx context.Context, userID string) ([]
 }
 
 // AssignToUser 为用户分配角色
-func (r *roleRepositoryImpl) AssignToUser(ctx context.Context, userID string, roleIDs []string) error {
+func (r *roleRepositoryImpl) AssignToUser(ctx context.Context, userID uint, roleIDs []uint) error {
 	if len(roleIDs) == 0 {
 		return nil
 	}
@@ -129,10 +129,7 @@ func (r *roleRepositoryImpl) AssignToUser(ctx context.Context, userID string, ro
 		// 创建新的关联关系
 		var userRoles []entity.UserRole
 		for _, roleID := range roleIDs {
-			userRoles = append(userRoles, entity.UserRole{
-				UserID: userID,
-				RoleID: roleID,
-			})
+			userRoles = append(userRoles, entity.UserRole{UserID: userID, RoleID: roleID})
 		}
 
 		return tx.Create(&userRoles).Error
@@ -140,7 +137,7 @@ func (r *roleRepositoryImpl) AssignToUser(ctx context.Context, userID string, ro
 }
 
 // RemoveFromUser 移除用户角色
-func (r *roleRepositoryImpl) RemoveFromUser(ctx context.Context, userID string, roleIDs []string) error {
+func (r *roleRepositoryImpl) RemoveFromUser(ctx context.Context, userID uint, roleIDs []uint) error {
 	if len(roleIDs) == 0 {
 		return nil
 	}

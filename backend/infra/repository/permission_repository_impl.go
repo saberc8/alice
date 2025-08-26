@@ -26,7 +26,7 @@ func (r *permissionRepositoryImpl) Create(ctx context.Context, permission *entit
 }
 
 // GetByID 根据ID获取权限
-func (r *permissionRepositoryImpl) GetByID(ctx context.Context, id string) (*entity.Permission, error) {
+func (r *permissionRepositoryImpl) GetByID(ctx context.Context, id uint) (*entity.Permission, error) {
 	var permission entity.Permission
 	err := r.db.WithContext(ctx).Where("id = ?", id).First(&permission).Error
 	if err != nil {
@@ -77,7 +77,7 @@ func (r *permissionRepositoryImpl) Update(ctx context.Context, permission *entit
 }
 
 // Delete 删除权限
-func (r *permissionRepositoryImpl) Delete(ctx context.Context, id string) error {
+func (r *permissionRepositoryImpl) Delete(ctx context.Context, id uint) error {
 	// 开启事务
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 删除角色权限关联
@@ -91,7 +91,7 @@ func (r *permissionRepositoryImpl) Delete(ctx context.Context, id string) error 
 }
 
 // GetByRoleID 根据角色ID获取权限列表
-func (r *permissionRepositoryImpl) GetByRoleID(ctx context.Context, roleID string) ([]*entity.Permission, error) {
+func (r *permissionRepositoryImpl) GetByRoleID(ctx context.Context, roleID uint) ([]*entity.Permission, error) {
 	var permissions []*entity.Permission
 
 	err := r.db.WithContext(ctx).
@@ -105,7 +105,7 @@ func (r *permissionRepositoryImpl) GetByRoleID(ctx context.Context, roleID strin
 }
 
 // GetByUserID 根据用户ID获取权限列表
-func (r *permissionRepositoryImpl) GetByUserID(ctx context.Context, userID string) ([]*entity.Permission, error) {
+func (r *permissionRepositoryImpl) GetByUserID(ctx context.Context, userID uint) ([]*entity.Permission, error) {
 	var permissions []*entity.Permission
 
 	err := r.db.WithContext(ctx).
@@ -122,7 +122,7 @@ func (r *permissionRepositoryImpl) GetByUserID(ctx context.Context, userID strin
 }
 
 // AssignToRole 为角色分配权限
-func (r *permissionRepositoryImpl) AssignToRole(ctx context.Context, roleID string, permissionIDs []string) error {
+func (r *permissionRepositoryImpl) AssignToRole(ctx context.Context, roleID uint, permissionIDs []uint) error {
 	if len(permissionIDs) == 0 {
 		return nil
 	}
@@ -136,10 +136,7 @@ func (r *permissionRepositoryImpl) AssignToRole(ctx context.Context, roleID stri
 		// 创建新的关联关系
 		var rolePermissions []entity.RolePermission
 		for _, permissionID := range permissionIDs {
-			rolePermissions = append(rolePermissions, entity.RolePermission{
-				RoleID:       roleID,
-				PermissionID: permissionID,
-			})
+			rolePermissions = append(rolePermissions, entity.RolePermission{RoleID: roleID, PermissionID: permissionID})
 		}
 
 		return tx.Create(&rolePermissions).Error
@@ -147,7 +144,7 @@ func (r *permissionRepositoryImpl) AssignToRole(ctx context.Context, roleID stri
 }
 
 // RemoveFromRole 移除角色权限
-func (r *permissionRepositoryImpl) RemoveFromRole(ctx context.Context, roleID string, permissionIDs []string) error {
+func (r *permissionRepositoryImpl) RemoveFromRole(ctx context.Context, roleID uint, permissionIDs []uint) error {
 	if len(permissionIDs) == 0 {
 		return nil
 	}
@@ -158,7 +155,7 @@ func (r *permissionRepositoryImpl) RemoveFromRole(ctx context.Context, roleID st
 }
 
 // CheckUserPermission 检查用户是否有指定权限
-func (r *permissionRepositoryImpl) CheckUserPermission(ctx context.Context, userID, resource, action string) (bool, error) {
+func (r *permissionRepositoryImpl) CheckUserPermission(ctx context.Context, userID uint, resource, action string) (bool, error) {
 	var count int64
 
 	err := r.db.WithContext(ctx).
@@ -174,7 +171,7 @@ func (r *permissionRepositoryImpl) CheckUserPermission(ctx context.Context, user
 }
 
 // CheckUserPermissionByCode 根据权限码检查用户权限
-func (r *permissionRepositoryImpl) CheckUserPermissionByCode(ctx context.Context, userID, code string) (bool, error) {
+func (r *permissionRepositoryImpl) CheckUserPermissionByCode(ctx context.Context, userID uint, code string) (bool, error) {
 	var count int64
 	err := r.db.WithContext(ctx).
 		Table("permissions").
@@ -189,7 +186,7 @@ func (r *permissionRepositoryImpl) CheckUserPermissionByCode(ctx context.Context
 }
 
 // GetByMenuIDs 根据菜单ID集合获取权限列表
-func (r *permissionRepositoryImpl) GetByMenuIDs(ctx context.Context, menuIDs []string) ([]*entity.Permission, error) {
+func (r *permissionRepositoryImpl) GetByMenuIDs(ctx context.Context, menuIDs []uint) ([]*entity.Permission, error) {
 	if len(menuIDs) == 0 {
 		return []*entity.Permission{}, nil
 	}
@@ -202,7 +199,7 @@ func (r *permissionRepositoryImpl) GetByMenuIDs(ctx context.Context, menuIDs []s
 }
 
 // GetByUserIDAndMenuIDs 根据用户和菜单ID集合获取权限列表
-func (r *permissionRepositoryImpl) GetByUserIDAndMenuIDs(ctx context.Context, userID string, menuIDs []string) ([]*entity.Permission, error) {
+func (r *permissionRepositoryImpl) GetByUserIDAndMenuIDs(ctx context.Context, userID uint, menuIDs []uint) ([]*entity.Permission, error) {
 	if len(menuIDs) == 0 {
 		return []*entity.Permission{}, nil
 	}
@@ -220,7 +217,7 @@ func (r *permissionRepositoryImpl) GetByUserIDAndMenuIDs(ctx context.Context, us
 }
 
 // GetByRoleIDAndMenuIDs 根据角色和菜单ID集合获取权限列表
-func (r *permissionRepositoryImpl) GetByRoleIDAndMenuIDs(ctx context.Context, roleID string, menuIDs []string) ([]*entity.Permission, error) {
+func (r *permissionRepositoryImpl) GetByRoleIDAndMenuIDs(ctx context.Context, roleID uint, menuIDs []uint) ([]*entity.Permission, error) {
 	if len(menuIDs) == 0 {
 		return []*entity.Permission{}, nil
 	}

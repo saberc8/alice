@@ -59,19 +59,23 @@ func (h *RoleHandler) CreateRole(c *gin.Context) {
 // @Tags Roles
 // @Produce json
 // @Security BearerAuth
-// @Param id path string true "角色ID"
+// @Param id path int true "角色ID"
 // @Success 200 {object} model.APIResponse
 // @Failure 400 {object} model.APIResponse
 // @Failure 500 {object} model.APIResponse
 // @Router /roles/{id} [get]
 func (h *RoleHandler) GetRole(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
+	idStr := c.Param("id")
+	if idStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "角色ID不能为空"))
 		return
 	}
-
-	role, err := h.roleService.GetRole(c.Request.Context(), id)
+	idVal, errConv := strconv.ParseUint(idStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "角色ID格式错误"))
+		return
+	}
+	role, err := h.roleService.GetRole(c.Request.Context(), uint(idVal))
 	if err != nil {
 		logger.Errorf("获取角色失败: %v", err)
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))
@@ -125,16 +129,21 @@ func (h *RoleHandler) ListRoles(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param id path string true "角色ID"
+// @Param id path int true "角色ID"
 // @Param request body service.UpdateRoleRequest true "更新角色请求"
 // @Success 200 {object} model.APIResponse
 // @Failure 400 {object} model.APIResponse
 // @Failure 500 {object} model.APIResponse
 // @Router /roles/{id} [put]
 func (h *RoleHandler) UpdateRole(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
+	idStr := c.Param("id")
+	if idStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "角色ID不能为空"))
+		return
+	}
+	idVal, errConv := strconv.ParseUint(idStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "角色ID格式错误"))
 		return
 	}
 
@@ -145,7 +154,7 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 		return
 	}
 
-	req.ID = id
+	req.ID = uint(idVal)
 
 	if err := h.roleService.UpdateRole(c.Request.Context(), &req); err != nil {
 		logger.Errorf("更新角色失败: %v", err)
@@ -162,19 +171,23 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 // @Tags Roles
 // @Produce json
 // @Security BearerAuth
-// @Param id path string true "角色ID"
+// @Param id path int true "角色ID"
 // @Success 200 {object} model.APIResponse
 // @Failure 400 {object} model.APIResponse
 // @Failure 500 {object} model.APIResponse
 // @Router /roles/{id} [delete]
 func (h *RoleHandler) DeleteRole(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
+	idStr := c.Param("id")
+	if idStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "角色ID不能为空"))
 		return
 	}
-
-	if err := h.roleService.DeleteRole(c.Request.Context(), id); err != nil {
+	idVal, errConv := strconv.ParseUint(idStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "角色ID格式错误"))
+		return
+	}
+	if err := h.roleService.DeleteRole(c.Request.Context(), uint(idVal)); err != nil {
 		logger.Errorf("删除角色失败: %v", err)
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
@@ -190,21 +203,26 @@ func (h *RoleHandler) DeleteRole(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param user_id path string true "用户ID"
+// @Param user_id path int true "用户ID"
 // @Param request body model.AssignIDsRequest true "角色ID集合 (role_ids)"
 // @Success 200 {object} model.APIResponse
 // @Failure 400 {object} model.APIResponse
 // @Failure 500 {object} model.APIResponse
 // @Router /users/{user_id}/roles [post]
 func (h *RoleHandler) AssignRolesToUser(c *gin.Context) {
-	userID := c.Param("user_id")
-	if userID == "" {
+	userIDStr := c.Param("user_id")
+	if userIDStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "用户ID不能为空"))
+		return
+	}
+	userVal, errConv := strconv.ParseUint(userIDStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "用户ID格式错误"))
 		return
 	}
 
 	var req struct {
-		RoleIDs []string `json:"role_ids" binding:"required"`
+		RoleIDs []uint `json:"role_ids" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -213,7 +231,7 @@ func (h *RoleHandler) AssignRolesToUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.roleService.AssignRolesToUser(c.Request.Context(), userID, req.RoleIDs); err != nil {
+	if err := h.roleService.AssignRolesToUser(c.Request.Context(), uint(userVal), req.RoleIDs); err != nil {
 		logger.Errorf("为用户分配角色失败: %v", err)
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
@@ -229,21 +247,26 @@ func (h *RoleHandler) AssignRolesToUser(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param user_id path string true "用户ID"
+// @Param user_id path int true "用户ID"
 // @Param request body model.AssignIDsRequest true "角色ID集合 (role_ids)"
 // @Success 200 {object} model.APIResponse
 // @Failure 400 {object} model.APIResponse
 // @Failure 500 {object} model.APIResponse
 // @Router /users/{user_id}/roles [delete]
 func (h *RoleHandler) RemoveRolesFromUser(c *gin.Context) {
-	userID := c.Param("user_id")
-	if userID == "" {
+	userIDStr := c.Param("user_id")
+	if userIDStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "用户ID不能为空"))
+		return
+	}
+	userVal, errConv := strconv.ParseUint(userIDStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "用户ID格式错误"))
 		return
 	}
 
 	var req struct {
-		RoleIDs []string `json:"role_ids" binding:"required"`
+		RoleIDs []uint `json:"role_ids" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -252,7 +275,7 @@ func (h *RoleHandler) RemoveRolesFromUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.roleService.RemoveRolesFromUser(c.Request.Context(), userID, req.RoleIDs); err != nil {
+	if err := h.roleService.RemoveRolesFromUser(c.Request.Context(), uint(userVal), req.RoleIDs); err != nil {
 		logger.Errorf("移除用户角色失败: %v", err)
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
@@ -267,19 +290,23 @@ func (h *RoleHandler) RemoveRolesFromUser(c *gin.Context) {
 // @Tags UserRoles
 // @Produce json
 // @Security BearerAuth
-// @Param user_id path string true "用户ID"
+// @Param user_id path int true "用户ID"
 // @Success 200 {object} model.APIResponse
 // @Failure 400 {object} model.APIResponse
 // @Failure 500 {object} model.APIResponse
 // @Router /users/{user_id}/roles [get]
 func (h *RoleHandler) GetUserRoles(c *gin.Context) {
-	userID := c.Param("user_id")
-	if userID == "" {
+	userIDStr := c.Param("user_id")
+	if userIDStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "用户ID不能为空"))
 		return
 	}
-
-	roles, err := h.roleService.GetUserRoles(c.Request.Context(), userID)
+	userVal, errConv := strconv.ParseUint(userIDStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "用户ID格式错误"))
+		return
+	}
+	roles, err := h.roleService.GetUserRoles(c.Request.Context(), uint(userVal))
 	if err != nil {
 		logger.Errorf("获取用户角色失败: %v", err)
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))

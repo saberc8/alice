@@ -26,7 +26,7 @@ func (r *menuRepositoryImpl) Create(ctx context.Context, menu *entity.Menu) erro
 }
 
 // GetByID 根据ID获取菜单
-func (r *menuRepositoryImpl) GetByID(ctx context.Context, id string) (*entity.Menu, error) {
+func (r *menuRepositoryImpl) GetByID(ctx context.Context, id uint) (*entity.Menu, error) {
 	var menu entity.Menu
 	err := r.db.WithContext(ctx).Where("id = ?", id).First(&menu).Error
 	if err != nil {
@@ -81,7 +81,7 @@ func (r *menuRepositoryImpl) Update(ctx context.Context, menu *entity.Menu) erro
 }
 
 // Delete 删除菜单
-func (r *menuRepositoryImpl) Delete(ctx context.Context, id string) error {
+func (r *menuRepositoryImpl) Delete(ctx context.Context, id uint) error {
 	// 开启事务
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 删除角色菜单关联
@@ -95,7 +95,7 @@ func (r *menuRepositoryImpl) Delete(ctx context.Context, id string) error {
 }
 
 // GetByUserID 根据用户ID获取菜单列表
-func (r *menuRepositoryImpl) GetByUserID(ctx context.Context, userID string) ([]*entity.Menu, error) {
+func (r *menuRepositoryImpl) GetByUserID(ctx context.Context, userID uint) ([]*entity.Menu, error) {
 	var menus []*entity.Menu
 
 	err := r.db.WithContext(ctx).
@@ -113,7 +113,7 @@ func (r *menuRepositoryImpl) GetByUserID(ctx context.Context, userID string) ([]
 }
 
 // GetTreeByUserID 根据用户ID获取菜单树
-func (r *menuRepositoryImpl) GetTreeByUserID(ctx context.Context, userID string) ([]*entity.Menu, error) {
+func (r *menuRepositoryImpl) GetTreeByUserID(ctx context.Context, userID uint) ([]*entity.Menu, error) {
 	// 获取用户菜单
 	menus, err := r.GetByUserID(ctx, userID)
 	if err != nil {
@@ -125,7 +125,7 @@ func (r *menuRepositoryImpl) GetTreeByUserID(ctx context.Context, userID string)
 }
 
 // GetByRoleID 根据角色ID获取菜单列表
-func (r *menuRepositoryImpl) GetByRoleID(ctx context.Context, roleID string) ([]*entity.Menu, error) {
+func (r *menuRepositoryImpl) GetByRoleID(ctx context.Context, roleID uint) ([]*entity.Menu, error) {
 	var menus []*entity.Menu
 
 	err := r.db.WithContext(ctx).
@@ -140,7 +140,7 @@ func (r *menuRepositoryImpl) GetByRoleID(ctx context.Context, roleID string) ([]
 }
 
 // AssignToRole 为角色分配菜单
-func (r *menuRepositoryImpl) AssignToRole(ctx context.Context, roleID string, menuIDs []string) error {
+func (r *menuRepositoryImpl) AssignToRole(ctx context.Context, roleID uint, menuIDs []uint) error {
 	if len(menuIDs) == 0 {
 		return nil
 	}
@@ -154,10 +154,7 @@ func (r *menuRepositoryImpl) AssignToRole(ctx context.Context, roleID string, me
 		// 创建新的关联关系
 		var roleMenus []entity.RoleMenu
 		for _, menuID := range menuIDs {
-			roleMenus = append(roleMenus, entity.RoleMenu{
-				RoleID: roleID,
-				MenuID: menuID,
-			})
+			roleMenus = append(roleMenus, entity.RoleMenu{RoleID: roleID, MenuID: menuID})
 		}
 
 		return tx.Create(&roleMenus).Error
@@ -165,7 +162,7 @@ func (r *menuRepositoryImpl) AssignToRole(ctx context.Context, roleID string, me
 }
 
 // RemoveFromRole 移除角色菜单
-func (r *menuRepositoryImpl) RemoveFromRole(ctx context.Context, roleID string, menuIDs []string) error {
+func (r *menuRepositoryImpl) RemoveFromRole(ctx context.Context, roleID uint, menuIDs []uint) error {
 	if len(menuIDs) == 0 {
 		return nil
 	}
@@ -176,7 +173,7 @@ func (r *menuRepositoryImpl) RemoveFromRole(ctx context.Context, roleID string, 
 }
 
 // GetChildren 获取子菜单
-func (r *menuRepositoryImpl) GetChildren(ctx context.Context, parentID string) ([]*entity.Menu, error) {
+func (r *menuRepositoryImpl) GetChildren(ctx context.Context, parentID uint) ([]*entity.Menu, error) {
 	var menus []*entity.Menu
 
 	err := r.db.WithContext(ctx).
@@ -188,7 +185,7 @@ func (r *menuRepositoryImpl) GetChildren(ctx context.Context, parentID string) (
 }
 
 // buildMenuTree 构建菜单树
-func (r *menuRepositoryImpl) buildMenuTree(menus []*entity.Menu, parentID *string) []*entity.Menu {
+func (r *menuRepositoryImpl) buildMenuTree(menus []*entity.Menu, parentID *uint) []*entity.Menu {
 	var tree []*entity.Menu
 
 	for _, menu := range menus {

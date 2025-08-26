@@ -22,16 +22,22 @@ func PermissionMiddleware(permissionService service.PermissionService, resource,
 			return
 		}
 
-		// 将用户ID转换为字符串
-		var userID string
+		// 统一转换为 uint
+		var userID uint
 		switch v := userIDValue.(type) {
-		case string:
-			userID = v
 		case uint:
-			userID = strconv.FormatUint(uint64(v), 10)
+			userID = v
 		case int:
-			userID = strconv.Itoa(v)
-		default:
+			if v < 0 {
+				v = 0
+			}
+			userID = uint(v)
+		case string:
+			if parsed, err := strconv.ParseUint(v, 10, 64); err == nil {
+				userID = uint(parsed)
+			}
+		}
+		if userID == 0 { // 简单校验
 			c.JSON(http.StatusUnauthorized, model.ErrorResponse(http.StatusUnauthorized, "无效的用户ID"))
 			c.Abort()
 			return
@@ -71,15 +77,21 @@ func PermissionCodeMiddleware(permissionService service.PermissionService, code 
 			return
 		}
 
-		var userID string
+		var userID uint
 		switch v := userIDValue.(type) {
-		case string:
-			userID = v
 		case uint:
-			userID = strconv.FormatUint(uint64(v), 10)
+			userID = v
 		case int:
-			userID = strconv.Itoa(v)
-		default:
+			if v < 0 {
+				v = 0
+			}
+			userID = uint(v)
+		case string:
+			if parsed, err := strconv.ParseUint(v, 10, 64); err == nil {
+				userID = uint(parsed)
+			}
+		}
+		if userID == 0 {
 			c.JSON(http.StatusUnauthorized, model.ErrorResponse(http.StatusUnauthorized, "无效的用户ID"))
 			c.Abort()
 			return

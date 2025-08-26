@@ -6,8 +6,6 @@ import (
 	"alice/pkg/logger"
 	"context"
 	"fmt"
-
-	"github.com/google/uuid"
 )
 
 // RoleService 角色服务接口
@@ -16,7 +14,7 @@ type RoleService interface {
 	CreateRole(ctx context.Context, req *CreateRoleRequest) (*entity.Role, error)
 
 	// GetRole 获取角色
-	GetRole(ctx context.Context, id string) (*entity.Role, error)
+	GetRole(ctx context.Context, id uint) (*entity.Role, error)
 
 	// ListRoles 获取角色列表
 	ListRoles(ctx context.Context, req *ListRolesRequest) (*ListRolesResponse, error)
@@ -25,16 +23,16 @@ type RoleService interface {
 	UpdateRole(ctx context.Context, req *UpdateRoleRequest) error
 
 	// DeleteRole 删除角色
-	DeleteRole(ctx context.Context, id string) error
+	DeleteRole(ctx context.Context, id uint) error
 
 	// AssignRolesToUser 为用户分配角色
-	AssignRolesToUser(ctx context.Context, userID string, roleIDs []string) error
+	AssignRolesToUser(ctx context.Context, userID uint, roleIDs []uint) error
 
 	// RemoveRolesFromUser 移除用户角色
-	RemoveRolesFromUser(ctx context.Context, userID string, roleIDs []string) error
+	RemoveRolesFromUser(ctx context.Context, userID uint, roleIDs []uint) error
 
 	// GetUserRoles 获取用户角色
-	GetUserRoles(ctx context.Context, userID string) ([]*entity.Role, error)
+	GetUserRoles(ctx context.Context, userID uint) ([]*entity.Role, error)
 }
 
 // CreateRoleRequest 创建角色请求
@@ -47,7 +45,7 @@ type CreateRoleRequest struct {
 
 // UpdateRoleRequest 更新角色请求
 type UpdateRoleRequest struct {
-	ID          string            `json:"id" validate:"required"`
+	ID          uint              `json:"id" validate:"required"`
 	Name        string            `json:"name" validate:"required,max=100"`
 	Code        string            `json:"code" validate:"required,max=100"`
 	Description *string           `json:"description,omitempty" validate:"omitempty,max=500"`
@@ -90,7 +88,6 @@ func (s *roleService) CreateRole(ctx context.Context, req *CreateRoleRequest) (*
 
 	// 创建角色实体
 	role := &entity.Role{
-		ID:          uuid.New().String(),
 		Name:        req.Name,
 		Code:        req.Code,
 		Description: req.Description,
@@ -111,7 +108,7 @@ func (s *roleService) CreateRole(ctx context.Context, req *CreateRoleRequest) (*
 }
 
 // GetRole 获取角色
-func (s *roleService) GetRole(ctx context.Context, id string) (*entity.Role, error) {
+func (s *roleService) GetRole(ctx context.Context, id uint) (*entity.Role, error) {
 	role, err := s.roleRepo.GetByID(ctx, id)
 	if err != nil {
 		logger.Errorf("获取角色失败: %v", err)
@@ -179,7 +176,7 @@ func (s *roleService) UpdateRole(ctx context.Context, req *UpdateRoleRequest) er
 }
 
 // DeleteRole 删除角色
-func (s *roleService) DeleteRole(ctx context.Context, id string) error {
+func (s *roleService) DeleteRole(ctx context.Context, id uint) error {
 	// 检查角色是否存在
 	existing, err := s.roleRepo.GetByID(ctx, id)
 	if err != nil {
@@ -200,7 +197,7 @@ func (s *roleService) DeleteRole(ctx context.Context, id string) error {
 }
 
 // AssignRolesToUser 为用户分配角色
-func (s *roleService) AssignRolesToUser(ctx context.Context, userID string, roleIDs []string) error {
+func (s *roleService) AssignRolesToUser(ctx context.Context, userID uint, roleIDs []uint) error {
 	if err := s.roleRepo.AssignToUser(ctx, userID, roleIDs); err != nil {
 		logger.Errorf("为用户分配角色失败: %v", err)
 		return fmt.Errorf("为用户分配角色失败: %w", err)
@@ -210,7 +207,7 @@ func (s *roleService) AssignRolesToUser(ctx context.Context, userID string, role
 }
 
 // RemoveRolesFromUser 移除用户角色
-func (s *roleService) RemoveRolesFromUser(ctx context.Context, userID string, roleIDs []string) error {
+func (s *roleService) RemoveRolesFromUser(ctx context.Context, userID uint, roleIDs []uint) error {
 	if err := s.roleRepo.RemoveFromUser(ctx, userID, roleIDs); err != nil {
 		logger.Errorf("移除用户角色失败: %v", err)
 		return fmt.Errorf("移除用户角色失败: %w", err)
@@ -220,7 +217,7 @@ func (s *roleService) RemoveRolesFromUser(ctx context.Context, userID string, ro
 }
 
 // GetUserRoles 获取用户角色
-func (s *roleService) GetUserRoles(ctx context.Context, userID string) ([]*entity.Role, error) {
+func (s *roleService) GetUserRoles(ctx context.Context, userID uint) ([]*entity.Role, error) {
 	roles, err := s.roleRepo.GetByUserID(ctx, userID)
 	if err != nil {
 		logger.Errorf("获取用户角色失败: %v", err)

@@ -140,9 +140,7 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 	// 查询用户角色（若可用）
 	var roles []model.RoleBrief
 	if h.roleService != nil {
-		// 注意：RoleService 使用的是 string 类型的用户ID，这里统一为字符串
-		userIDStr := strconv.FormatUint(uint64(uid), 10)
-		if rlist, rerr := h.roleService.GetUserRoles(c.Request.Context(), userIDStr); rerr == nil {
+		if rlist, rerr := h.roleService.GetUserRoles(c.Request.Context(), uid); rerr == nil {
 			roles = make([]model.RoleBrief, 0, len(rlist))
 			for _, r := range rlist {
 				roles = append(roles, model.RoleBrief{ID: r.ID, Name: r.Name, Code: r.Code})

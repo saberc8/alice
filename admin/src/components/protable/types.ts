@@ -52,11 +52,15 @@ export interface ProTableProps<T = any> {
   title?: string;
   rowKey?: string;
   columns: ProColumn<T>[];
-  request: (params: ProTableRequestParams) => Promise<T[]>;
+  // request: 支持返回数组 或 { list, total }
+  request: (params: ProTableRequestParams) => Promise<T[] | { list: T[]; total: number }>;
   // CRUD（存在即自动渲染按钮）
   onCreate?: (values: Partial<T>) => Promise<any>;
   onUpdate?: (id: string | number, values: Partial<T>) => Promise<any>;
   onDelete?: (id: string | number) => Promise<any>;
   // 是否树形数据
   isTree?: boolean;
+  // 是否显示分页（树模式默认不分页）
+  pagination?: boolean;
+  pageSize?: number;
 }

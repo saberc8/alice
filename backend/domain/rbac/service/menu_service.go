@@ -6,8 +6,6 @@ import (
 	"alice/pkg/logger"
 	"context"
 	"fmt"
-
-	"github.com/google/uuid"
 )
 
 // MenuService 菜单服务接口
@@ -16,7 +14,7 @@ type MenuService interface {
 	CreateMenu(ctx context.Context, req *CreateMenuRequest) (*entity.Menu, error)
 
 	// GetMenu 获取菜单
-	GetMenu(ctx context.Context, id string) (*entity.Menu, error)
+	GetMenu(ctx context.Context, id uint) (*entity.Menu, error)
 
 	// ListMenus 获取菜单列表
 	ListMenus(ctx context.Context) ([]*entity.Menu, error)
@@ -28,30 +26,30 @@ type MenuService interface {
 	UpdateMenu(ctx context.Context, req *UpdateMenuRequest) error
 
 	// DeleteMenu 删除菜单
-	DeleteMenu(ctx context.Context, id string) error
+	DeleteMenu(ctx context.Context, id uint) error
 
 	// AssignMenusToRole 为角色分配菜单
-	AssignMenusToRole(ctx context.Context, roleID string, menuIDs []string) error
+	AssignMenusToRole(ctx context.Context, roleID uint, menuIDs []uint) error
 
 	// RemoveMenusFromRole 移除角色菜单
-	RemoveMenusFromRole(ctx context.Context, roleID string, menuIDs []string) error
+	RemoveMenusFromRole(ctx context.Context, roleID uint, menuIDs []uint) error
 
 	// GetRoleMenus 获取角色菜单
-	GetRoleMenus(ctx context.Context, roleID string) ([]*entity.Menu, error)
+	GetRoleMenus(ctx context.Context, roleID uint) ([]*entity.Menu, error)
 
 	// GetUserMenus 获取用户菜单
-	GetUserMenus(ctx context.Context, userID string) ([]*entity.Menu, error)
+	GetUserMenus(ctx context.Context, userID uint) ([]*entity.Menu, error)
 
 	// GetUserMenuTree 获取用户菜单树
-	GetUserMenuTree(ctx context.Context, userID string) ([]*entity.Menu, error)
+	GetUserMenuTree(ctx context.Context, userID uint) ([]*entity.Menu, error)
 
 	// GetRoleMenuTree 获取角色菜单树（按角色注入 perms）
-	GetRoleMenuTree(ctx context.Context, roleID string) ([]*entity.Menu, error)
+	GetRoleMenuTree(ctx context.Context, roleID uint) ([]*entity.Menu, error)
 }
 
 // CreateMenuRequest 创建菜单请求
 type CreateMenuRequest struct {
-	ParentID    *string           `json:"parent_id,omitempty"`
+	ParentID    *uint             `json:"parent_id,omitempty"`
 	Name        string            `json:"name" validate:"required,max=100"`
 	Code        string            `json:"code" validate:"required,max=100"`
 	Path        *string           `json:"path,omitempty" validate:"omitempty,max=200"`
@@ -64,8 +62,8 @@ type CreateMenuRequest struct {
 
 // UpdateMenuRequest 更新菜单请求
 type UpdateMenuRequest struct {
-	ID          string            `json:"id" validate:"required"`
-	ParentID    *string           `json:"parent_id,omitempty"`
+	ID          uint              `json:"id" validate:"required"`
+	ParentID    *uint             `json:"parent_id,omitempty"`
 	Name        string            `json:"name" validate:"required,max=100"`
 	Code        string            `json:"code" validate:"required,max=100"`
 	Path        *string           `json:"path,omitempty" validate:"omitempty,max=200"`
@@ -99,7 +97,7 @@ func (s *menuService) CreateMenu(ctx context.Context, req *CreateMenuRequest) (*
 	}
 
 	// 检查父菜单是否存在
-	if req.ParentID != nil && *req.ParentID != "" {
+	if req.ParentID != nil && *req.ParentID != 0 {
 		parent, err := s.menuRepo.GetByID(ctx, *req.ParentID)
 		if err != nil {
 			return nil, fmt.Errorf("获取父菜单失败: %w", err)
@@ -111,7 +109,6 @@ func (s *menuService) CreateMenu(ctx context.Context, req *CreateMenuRequest) (*
 
 	// 创建菜单实体
 	menu := &entity.Menu{
-		ID:          uuid.New().String(),
 		ParentID:    req.ParentID,
 		Name:        req.Name,
 		Code:        req.Code,
@@ -137,7 +134,7 @@ func (s *menuService) CreateMenu(ctx context.Context, req *CreateMenuRequest) (*
 }
 
 // GetMenu 获取菜单
-func (s *menuService) GetMenu(ctx context.Context, id string) (*entity.Menu, error) {
+func (s *menuService) GetMenu(ctx context.Context, id uint) (*entity.Menu, error) {
 	menu, err := s.menuRepo.GetByID(ctx, id)
 	if err != nil {
 		logger.Errorf("获取菜单失败: %v", err)
@@ -170,7 +167,8 @@ func (s *menuService) GetMenuTree(ctx context.Context) ([]*entity.Menu, error) {
 		return nil, fmt.Errorf("获取菜单树失败: %w", err)
 	}
 	// 注入菜单下的权限集合到 meta.perms（全量，不区分角色/用户）
-	s.attachPermsToMenus(ctx, tree, "")
+	var zeroUserID uint = 0
+	s.attachPermsToMenus(ctx, tree, zeroUserID)
 	return tree, nil
 }
 
@@ -196,7 +194,7 @@ func (s *menuService) UpdateMenu(ctx context.Context, req *UpdateMenuRequest) er
 	}
 
 	// 检查父菜单是否存在
-	if req.ParentID != nil && *req.ParentID != "" {
+	if req.ParentID != nil && *req.ParentID != 0 {
 		parent, err := s.menuRepo.GetByID(ctx, *req.ParentID)
 		if err != nil {
 			return fmt.Errorf("获取父菜单失败: %w", err)
@@ -231,7 +229,7 @@ func (s *menuService) UpdateMenu(ctx context.Context, req *UpdateMenuRequest) er
 }
 
 // DeleteMenu 删除菜单
-func (s *menuService) DeleteMenu(ctx context.Context, id string) error {
+func (s *menuService) DeleteMenu(ctx context.Context, id uint) error {
 	// 检查菜单是否存在
 	existing, err := s.menuRepo.GetByID(ctx, id)
 	if err != nil {
@@ -257,7 +255,7 @@ func (s *menuService) DeleteMenu(ctx context.Context, id string) error {
 	// 先删除挂载在该菜单下的按钮权限（及其角色关联由仓储层的外键/业务逻辑负责）
 	// 这里直接调用权限仓储按菜单ID删除（若无方法，则让数据库层通过外键/触发器处理）。
 	// 简化处理：查出权限并逐一删除，复用现有 Delete 逻辑。
-	if perms, err := s.permissionRepo.GetByMenuIDs(ctx, []string{id}); err == nil {
+	if perms, err := s.permissionRepo.GetByMenuIDs(ctx, []uint{id}); err == nil {
 		for _, p := range perms {
 			_ = s.permissionRepo.Delete(ctx, p.ID)
 		}
@@ -272,7 +270,7 @@ func (s *menuService) DeleteMenu(ctx context.Context, id string) error {
 }
 
 // AssignMenusToRole 为角色分配菜单
-func (s *menuService) AssignMenusToRole(ctx context.Context, roleID string, menuIDs []string) error {
+func (s *menuService) AssignMenusToRole(ctx context.Context, roleID uint, menuIDs []uint) error {
 	if err := s.menuRepo.AssignToRole(ctx, roleID, menuIDs); err != nil {
 		logger.Errorf("为角色分配菜单失败: %v", err)
 		return fmt.Errorf("为角色分配菜单失败: %w", err)
@@ -282,7 +280,7 @@ func (s *menuService) AssignMenusToRole(ctx context.Context, roleID string, menu
 }
 
 // RemoveMenusFromRole 移除角色菜单
-func (s *menuService) RemoveMenusFromRole(ctx context.Context, roleID string, menuIDs []string) error {
+func (s *menuService) RemoveMenusFromRole(ctx context.Context, roleID uint, menuIDs []uint) error {
 	if err := s.menuRepo.RemoveFromRole(ctx, roleID, menuIDs); err != nil {
 		logger.Errorf("移除角色菜单失败: %v", err)
 		return fmt.Errorf("移除角色菜单失败: %w", err)
@@ -292,7 +290,7 @@ func (s *menuService) RemoveMenusFromRole(ctx context.Context, roleID string, me
 }
 
 // GetRoleMenus 获取角色菜单
-func (s *menuService) GetRoleMenus(ctx context.Context, roleID string) ([]*entity.Menu, error) {
+func (s *menuService) GetRoleMenus(ctx context.Context, roleID uint) ([]*entity.Menu, error) {
 	menus, err := s.menuRepo.GetByRoleID(ctx, roleID)
 	if err != nil {
 		logger.Errorf("获取角色菜单失败: %v", err)
@@ -303,7 +301,7 @@ func (s *menuService) GetRoleMenus(ctx context.Context, roleID string) ([]*entit
 }
 
 // GetUserMenus 获取用户菜单
-func (s *menuService) GetUserMenus(ctx context.Context, userID string) ([]*entity.Menu, error) {
+func (s *menuService) GetUserMenus(ctx context.Context, userID uint) ([]*entity.Menu, error) {
 	menus, err := s.menuRepo.GetByUserID(ctx, userID)
 	if err != nil {
 		logger.Errorf("获取用户菜单失败: %v", err)
@@ -314,7 +312,7 @@ func (s *menuService) GetUserMenus(ctx context.Context, userID string) ([]*entit
 }
 
 // GetUserMenuTree 获取用户菜单树
-func (s *menuService) GetUserMenuTree(ctx context.Context, userID string) ([]*entity.Menu, error) {
+func (s *menuService) GetUserMenuTree(ctx context.Context, userID uint) ([]*entity.Menu, error) {
 	tree, err := s.menuRepo.GetTreeByUserID(ctx, userID)
 	if err != nil {
 		logger.Errorf("获取用户菜单树失败: %v", err)
@@ -326,7 +324,7 @@ func (s *menuService) GetUserMenuTree(ctx context.Context, userID string) ([]*en
 }
 
 // GetRoleMenuTree 获取角色菜单树（按角色注入 perms）
-func (s *menuService) GetRoleMenuTree(ctx context.Context, roleID string) ([]*entity.Menu, error) {
+func (s *menuService) GetRoleMenuTree(ctx context.Context, roleID uint) ([]*entity.Menu, error) {
 	// 角色菜单列表（不筛用户）
 	menus, err := s.menuRepo.GetByRoleID(ctx, roleID)
 	if err != nil {
@@ -345,7 +343,7 @@ func (s *menuService) buildTreeFromFlat(menus []*entity.Menu) []*entity.Menu {
 	// 简易复用：直接用仓储的构建方式——按 parentID 递归拼装
 	// 这里复制逻辑以避免额外仓储调用
 	var tree []*entity.Menu
-	idMap := make(map[string]*entity.Menu)
+	idMap := make(map[uint]*entity.Menu)
 	for _, m := range menus {
 		idMap[m.ID] = m
 	}
@@ -364,8 +362,8 @@ func (s *menuService) buildTreeFromFlat(menus []*entity.Menu) []*entity.Menu {
 }
 
 // attachRolePermsToMenus 将某角色的权限码注入到菜单的 Meta.Perms
-func (s *menuService) attachRolePermsToMenus(ctx context.Context, menus []*entity.Menu, roleID string) {
-	var menuIDs []string
+func (s *menuService) attachRolePermsToMenus(ctx context.Context, menus []*entity.Menu, roleID uint) {
+	var menuIDs []uint
 	var collect func(ms []*entity.Menu)
 	collect = func(ms []*entity.Menu) {
 		for _, m := range ms {
@@ -382,7 +380,7 @@ func (s *menuService) attachRolePermsToMenus(ctx context.Context, menus []*entit
 		logger.Errorf("查询角色菜单权限失败: %v", err)
 		return
 	}
-	byMenu := make(map[string][]string)
+	byMenu := make(map[uint][]string)
 	for _, p := range perms {
 		if p.MenuID == nil {
 			continue
@@ -404,9 +402,9 @@ func (s *menuService) attachRolePermsToMenus(ctx context.Context, menus []*entit
 }
 
 // attachPermsToMenus 将权限码注入到菜单的 Meta.Perms；userID 为空表示全量
-func (s *menuService) attachPermsToMenus(ctx context.Context, menus []*entity.Menu, userID string) {
+func (s *menuService) attachPermsToMenus(ctx context.Context, menus []*entity.Menu, userID uint) {
 	// 收集所有菜单ID
-	var menuIDs []string
+	var menuIDs []uint
 	var collect func(ms []*entity.Menu)
 	collect = func(ms []*entity.Menu) {
 		for _, m := range ms {
@@ -421,7 +419,7 @@ func (s *menuService) attachPermsToMenus(ctx context.Context, menus []*entity.Me
 	// 查询权限
 	var perms []*entity.Permission
 	var err error
-	if userID == "" {
+	if userID == 0 {
 		perms, err = s.permissionRepo.GetByMenuIDs(ctx, menuIDs)
 	} else {
 		perms, err = s.permissionRepo.GetByUserIDAndMenuIDs(ctx, userID, menuIDs)
@@ -432,7 +430,7 @@ func (s *menuService) attachPermsToMenus(ctx context.Context, menus []*entity.Me
 	}
 
 	// 按菜单ID聚合权限码
-	byMenu := make(map[string][]string)
+	byMenu := make(map[uint][]string)
 	for _, p := range perms {
 		if p.MenuID == nil {
 			continue

@@ -7,8 +7,8 @@ import (
 // UserRole 用户角色关联表
 type UserRole struct {
 	ID       uint      `json:"id" gorm:"primaryKey"`
-	UserID   string    `json:"user_id" gorm:"not null;type:varchar(36);index"`
-	RoleID   string    `json:"role_id" gorm:"not null;type:varchar(36);index"`
+	UserID   uint      `json:"user_id" gorm:"not null;index"`
+	RoleID   uint      `json:"role_id" gorm:"not null;index"`
 	CreateAt time.Time `json:"created_at"`
 }
 
@@ -20,8 +20,8 @@ func (UserRole) TableName() string {
 // RolePermission 角色权限关联表
 type RolePermission struct {
 	ID           uint      `json:"id" gorm:"primaryKey"`
-	RoleID       string    `json:"role_id" gorm:"not null;type:varchar(36);index"`
-	PermissionID string    `json:"permission_id" gorm:"not null;type:varchar(36);index"`
+	RoleID       uint      `json:"role_id" gorm:"not null;index"`
+	PermissionID uint      `json:"permission_id" gorm:"not null;index"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 
@@ -33,8 +33,8 @@ func (RolePermission) TableName() string {
 // RoleMenu 角色菜单关联表
 type RoleMenu struct {
 	ID        uint      `json:"id" gorm:"primaryKey"`
-	RoleID    string    `json:"role_id" gorm:"not null;type:varchar(36);index"`
-	MenuID    string    `json:"menu_id" gorm:"not null;type:varchar(36);index"`
+	RoleID    uint      `json:"role_id" gorm:"not null;index"`
+	MenuID    uint      `json:"menu_id" gorm:"not null;index"`
 	CreatedAt time.Time `json:"created_at"`
 }
 

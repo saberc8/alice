@@ -6,8 +6,6 @@ import (
 	"alice/pkg/logger"
 	"context"
 	"fmt"
-
-	"github.com/google/uuid"
 )
 
 // PermissionService 权限服务接口
@@ -16,7 +14,7 @@ type PermissionService interface {
 	CreatePermission(ctx context.Context, req *CreatePermissionRequest) (*entity.Permission, error)
 
 	// GetPermission 获取权限
-	GetPermission(ctx context.Context, id string) (*entity.Permission, error)
+	GetPermission(ctx context.Context, id uint) (*entity.Permission, error)
 
 	// ListPermissions 获取权限列表
 	ListPermissions(ctx context.Context, req *ListPermissionsRequest) (*ListPermissionsResponse, error)
@@ -25,32 +23,32 @@ type PermissionService interface {
 	UpdatePermission(ctx context.Context, req *UpdatePermissionRequest) error
 
 	// DeletePermission 删除权限
-	DeletePermission(ctx context.Context, id string) error
+	DeletePermission(ctx context.Context, id uint) error
 
 	// AssignPermissionsToRole 为角色分配权限
-	AssignPermissionsToRole(ctx context.Context, roleID string, permissionIDs []string) error
+	AssignPermissionsToRole(ctx context.Context, roleID uint, permissionIDs []uint) error
 
 	// RemovePermissionsFromRole 移除角色权限
-	RemovePermissionsFromRole(ctx context.Context, roleID string, permissionIDs []string) error
+	RemovePermissionsFromRole(ctx context.Context, roleID uint, permissionIDs []uint) error
 
 	// GetRolePermissions 获取角色权限
-	GetRolePermissions(ctx context.Context, roleID string) ([]*entity.Permission, error)
+	GetRolePermissions(ctx context.Context, roleID uint) ([]*entity.Permission, error)
 
 	// GetUserPermissions 获取用户权限
-	GetUserPermissions(ctx context.Context, userID string) ([]*entity.Permission, error)
+	GetUserPermissions(ctx context.Context, userID uint) ([]*entity.Permission, error)
 
 	// CheckUserPermission 检查用户权限
-	CheckUserPermission(ctx context.Context, userID, resource, action string) (bool, error)
+	CheckUserPermission(ctx context.Context, userID uint, resource, action string) (bool, error)
 
 	// CheckUserPermissionByCode 基于权限码检查用户是否有权限
-	CheckUserPermissionByCode(ctx context.Context, userID, code string) (bool, error)
+	CheckUserPermissionByCode(ctx context.Context, userID uint, code string) (bool, error)
 }
 
 // CreatePermissionRequest 创建权限请求
 type CreatePermissionRequest struct {
 	Name        string                  `json:"name" validate:"required,max=100"`
 	Code        string                  `json:"code" validate:"required,max=100"`
-	MenuID      *string                 `json:"menu_id,omitempty"`
+	MenuID      *uint                   `json:"menu_id,omitempty"`
 	Resource    string                  `json:"resource" validate:"required,max=100"`
 	Action      string                  `json:"action" validate:"required,max=50"`
 	Description *string                 `json:"description,omitempty" validate:"omitempty,max=500"`
@@ -59,10 +57,10 @@ type CreatePermissionRequest struct {
 
 // UpdatePermissionRequest 更新权限请求
 type UpdatePermissionRequest struct {
-	ID          string                  `json:"id" validate:"required"`
+	ID          uint                    `json:"id" validate:"required"`
 	Name        string                  `json:"name" validate:"required,max=100"`
 	Code        string                  `json:"code" validate:"required,max=100"`
-	MenuID      *string                 `json:"menu_id,omitempty"`
+	MenuID      *uint                   `json:"menu_id,omitempty"`
 	Resource    string                  `json:"resource" validate:"required,max=100"`
 	Action      string                  `json:"action" validate:"required,max=50"`
 	Description *string                 `json:"description,omitempty" validate:"omitempty,max=500"`
@@ -105,7 +103,6 @@ func (s *permissionService) CreatePermission(ctx context.Context, req *CreatePer
 
 	// 创建权限实体
 	permission := &entity.Permission{
-		ID:          uuid.New().String(),
 		Name:        req.Name,
 		Code:        req.Code,
 		MenuID:      req.MenuID,
@@ -129,7 +126,7 @@ func (s *permissionService) CreatePermission(ctx context.Context, req *CreatePer
 }
 
 // GetPermission 获取权限
-func (s *permissionService) GetPermission(ctx context.Context, id string) (*entity.Permission, error) {
+func (s *permissionService) GetPermission(ctx context.Context, id uint) (*entity.Permission, error) {
 	permission, err := s.permissionRepo.GetByID(ctx, id)
 	if err != nil {
 		logger.Errorf("获取权限失败: %v", err)
@@ -200,7 +197,7 @@ func (s *permissionService) UpdatePermission(ctx context.Context, req *UpdatePer
 }
 
 // DeletePermission 删除权限
-func (s *permissionService) DeletePermission(ctx context.Context, id string) error {
+func (s *permissionService) DeletePermission(ctx context.Context, id uint) error {
 	// 检查权限是否存在
 	existing, err := s.permissionRepo.GetByID(ctx, id)
 	if err != nil {
@@ -221,7 +218,7 @@ func (s *permissionService) DeletePermission(ctx context.Context, id string) err
 }
 
 // AssignPermissionsToRole 为角色分配权限
-func (s *permissionService) AssignPermissionsToRole(ctx context.Context, roleID string, permissionIDs []string) error {
+func (s *permissionService) AssignPermissionsToRole(ctx context.Context, roleID uint, permissionIDs []uint) error {
 	if err := s.permissionRepo.AssignToRole(ctx, roleID, permissionIDs); err != nil {
 		logger.Errorf("为角色分配权限失败: %v", err)
 		return fmt.Errorf("为角色分配权限失败: %w", err)
@@ -231,7 +228,7 @@ func (s *permissionService) AssignPermissionsToRole(ctx context.Context, roleID 
 }
 
 // RemovePermissionsFromRole 移除角色权限
-func (s *permissionService) RemovePermissionsFromRole(ctx context.Context, roleID string, permissionIDs []string) error {
+func (s *permissionService) RemovePermissionsFromRole(ctx context.Context, roleID uint, permissionIDs []uint) error {
 	if err := s.permissionRepo.RemoveFromRole(ctx, roleID, permissionIDs); err != nil {
 		logger.Errorf("移除角色权限失败: %v", err)
 		return fmt.Errorf("移除角色权限失败: %w", err)
@@ -241,7 +238,7 @@ func (s *permissionService) RemovePermissionsFromRole(ctx context.Context, roleI
 }
 
 // GetRolePermissions 获取角色权限
-func (s *permissionService) GetRolePermissions(ctx context.Context, roleID string) ([]*entity.Permission, error) {
+func (s *permissionService) GetRolePermissions(ctx context.Context, roleID uint) ([]*entity.Permission, error) {
 	permissions, err := s.permissionRepo.GetByRoleID(ctx, roleID)
 	if err != nil {
 		logger.Errorf("获取角色权限失败: %v", err)
@@ -252,7 +249,7 @@ func (s *permissionService) GetRolePermissions(ctx context.Context, roleID strin
 }
 
 // GetUserPermissions 获取用户权限
-func (s *permissionService) GetUserPermissions(ctx context.Context, userID string) ([]*entity.Permission, error) {
+func (s *permissionService) GetUserPermissions(ctx context.Context, userID uint) ([]*entity.Permission, error) {
 	permissions, err := s.permissionRepo.GetByUserID(ctx, userID)
 	if err != nil {
 		logger.Errorf("获取用户权限失败: %v", err)
@@ -263,7 +260,7 @@ func (s *permissionService) GetUserPermissions(ctx context.Context, userID strin
 }
 
 // CheckUserPermission 检查用户权限
-func (s *permissionService) CheckUserPermission(ctx context.Context, userID, resource, action string) (bool, error) {
+func (s *permissionService) CheckUserPermission(ctx context.Context, userID uint, resource, action string) (bool, error) {
 	hasPermission, err := s.permissionRepo.CheckUserPermission(ctx, userID, resource, action)
 	if err != nil {
 		logger.Errorf("检查用户权限失败: %v", err)
@@ -274,7 +271,7 @@ func (s *permissionService) CheckUserPermission(ctx context.Context, userID, res
 }
 
 // CheckUserPermissionByCode 基于权限码检查用户是否有权限
-func (s *permissionService) CheckUserPermissionByCode(ctx context.Context, userID, code string) (bool, error) {
+func (s *permissionService) CheckUserPermissionByCode(ctx context.Context, userID uint, code string) (bool, error) {
 	hasPermission, err := s.permissionRepo.CheckUserPermissionByCode(ctx, userID, code)
 	if err != nil {
 		logger.Errorf("按权限码检查用户权限失败: %v", err)

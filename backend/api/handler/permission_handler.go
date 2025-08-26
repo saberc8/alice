@@ -65,13 +65,17 @@ func (h *PermissionHandler) CreatePermission(c *gin.Context) {
 // @Failure 500 {object} model.APIResponse
 // @Router /permissions/{id} [get]
 func (h *PermissionHandler) GetPermission(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
+	idStr := c.Param("id")
+	if idStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "权限ID不能为空"))
 		return
 	}
-
-	permission, err := h.permissionService.GetPermission(c.Request.Context(), id)
+	idVal, errConv := strconv.ParseUint(idStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "权限ID格式错误"))
+		return
+	}
+	permission, err := h.permissionService.GetPermission(c.Request.Context(), uint(idVal))
 	if err != nil {
 		logger.Errorf("获取权限失败: %v", err)
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))
@@ -132,9 +136,14 @@ func (h *PermissionHandler) ListPermissions(c *gin.Context) {
 // @Failure 500 {object} model.APIResponse
 // @Router /permissions/{id} [put]
 func (h *PermissionHandler) UpdatePermission(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
+	idStr := c.Param("id")
+	if idStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "权限ID不能为空"))
+		return
+	}
+	idVal, errConv := strconv.ParseUint(idStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "权限ID格式错误"))
 		return
 	}
 
@@ -145,7 +154,7 @@ func (h *PermissionHandler) UpdatePermission(c *gin.Context) {
 		return
 	}
 
-	req.ID = id
+	req.ID = uint(idVal)
 
 	if err := h.permissionService.UpdatePermission(c.Request.Context(), &req); err != nil {
 		logger.Errorf("更新权限失败: %v", err)
@@ -168,13 +177,17 @@ func (h *PermissionHandler) UpdatePermission(c *gin.Context) {
 // @Failure 500 {object} model.APIResponse
 // @Router /permissions/{id} [delete]
 func (h *PermissionHandler) DeletePermission(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
+	idStr := c.Param("id")
+	if idStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "权限ID不能为空"))
 		return
 	}
-
-	if err := h.permissionService.DeletePermission(c.Request.Context(), id); err != nil {
+	idVal, errConv := strconv.ParseUint(idStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "权限ID格式错误"))
+		return
+	}
+	if err := h.permissionService.DeletePermission(c.Request.Context(), uint(idVal)); err != nil {
 		logger.Errorf("删除权限失败: %v", err)
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
@@ -197,14 +210,18 @@ func (h *PermissionHandler) DeletePermission(c *gin.Context) {
 // @Failure 500 {object} model.APIResponse
 // @Router /roles/{id}/permissions [post]
 func (h *PermissionHandler) AssignPermissionsToRole(c *gin.Context) {
-	roleID := c.Param("id")
-	if roleID == "" {
+	roleIDStr := c.Param("id")
+	if roleIDStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "角色ID不能为空"))
 		return
 	}
-
+	roleVal, errConv := strconv.ParseUint(roleIDStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "角色ID格式错误"))
+		return
+	}
 	var req struct {
-		PermissionIDs []string `json:"permission_ids" binding:"required"`
+		PermissionIDs []uint `json:"permission_ids" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -213,7 +230,7 @@ func (h *PermissionHandler) AssignPermissionsToRole(c *gin.Context) {
 		return
 	}
 
-	if err := h.permissionService.AssignPermissionsToRole(c.Request.Context(), roleID, req.PermissionIDs); err != nil {
+	if err := h.permissionService.AssignPermissionsToRole(c.Request.Context(), uint(roleVal), req.PermissionIDs); err != nil {
 		logger.Errorf("为角色分配权限失败: %v", err)
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
@@ -236,14 +253,18 @@ func (h *PermissionHandler) AssignPermissionsToRole(c *gin.Context) {
 // @Failure 500 {object} model.APIResponse
 // @Router /roles/{id}/permissions [delete]
 func (h *PermissionHandler) RemovePermissionsFromRole(c *gin.Context) {
-	roleID := c.Param("id")
-	if roleID == "" {
+	roleIDStr := c.Param("id")
+	if roleIDStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "角色ID不能为空"))
 		return
 	}
-
+	roleVal, errConv := strconv.ParseUint(roleIDStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "角色ID格式错误"))
+		return
+	}
 	var req struct {
-		PermissionIDs []string `json:"permission_ids" binding:"required"`
+		PermissionIDs []uint `json:"permission_ids" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -252,7 +273,7 @@ func (h *PermissionHandler) RemovePermissionsFromRole(c *gin.Context) {
 		return
 	}
 
-	if err := h.permissionService.RemovePermissionsFromRole(c.Request.Context(), roleID, req.PermissionIDs); err != nil {
+	if err := h.permissionService.RemovePermissionsFromRole(c.Request.Context(), uint(roleVal), req.PermissionIDs); err != nil {
 		logger.Errorf("移除角色权限失败: %v", err)
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
@@ -273,13 +294,17 @@ func (h *PermissionHandler) RemovePermissionsFromRole(c *gin.Context) {
 // @Failure 500 {object} model.APIResponse
 // @Router /roles/{id}/permissions [get]
 func (h *PermissionHandler) GetRolePermissions(c *gin.Context) {
-	roleID := c.Param("id")
-	if roleID == "" {
+	roleIDStr := c.Param("id")
+	if roleIDStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "角色ID不能为空"))
 		return
 	}
-
-	permissions, err := h.permissionService.GetRolePermissions(c.Request.Context(), roleID)
+	roleVal, errConv := strconv.ParseUint(roleIDStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "角色ID格式错误"))
+		return
+	}
+	permissions, err := h.permissionService.GetRolePermissions(c.Request.Context(), uint(roleVal))
 	if err != nil {
 		logger.Errorf("获取角色权限失败: %v", err)
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))
@@ -301,13 +326,17 @@ func (h *PermissionHandler) GetRolePermissions(c *gin.Context) {
 // @Failure 500 {object} model.APIResponse
 // @Router /users/{user_id}/permissions [get]
 func (h *PermissionHandler) GetUserPermissions(c *gin.Context) {
-	userID := c.Param("user_id")
-	if userID == "" {
+	userIDStr := c.Param("user_id")
+	if userIDStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "用户ID不能为空"))
 		return
 	}
-
-	permissions, err := h.permissionService.GetUserPermissions(c.Request.Context(), userID)
+	userVal, errConv := strconv.ParseUint(userIDStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "用户ID格式错误"))
+		return
+	}
+	permissions, err := h.permissionService.GetUserPermissions(c.Request.Context(), uint(userVal))
 	if err != nil {
 		logger.Errorf("获取用户权限失败: %v", err)
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))
@@ -331,9 +360,14 @@ func (h *PermissionHandler) GetUserPermissions(c *gin.Context) {
 // @Failure 500 {object} model.APIResponse
 // @Router /users/{user_id}/permissions/check [get]
 func (h *PermissionHandler) CheckUserPermission(c *gin.Context) {
-	userID := c.Param("user_id")
-	if userID == "" {
+	userIDStr := c.Param("user_id")
+	if userIDStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "用户ID不能为空"))
+		return
+	}
+	userVal, errConv := strconv.ParseUint(userIDStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "用户ID格式错误"))
 		return
 	}
 
@@ -345,7 +379,7 @@ func (h *PermissionHandler) CheckUserPermission(c *gin.Context) {
 		return
 	}
 
-	hasPermission, err := h.permissionService.CheckUserPermission(c.Request.Context(), userID, resource, action)
+	hasPermission, err := h.permissionService.CheckUserPermission(c.Request.Context(), uint(userVal), resource, action)
 	if err != nil {
 		logger.Errorf("检查用户权限失败: %v", err)
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))

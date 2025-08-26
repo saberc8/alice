@@ -11,7 +11,7 @@ type RoleRepository interface {
 	Create(ctx context.Context, role *entity.Role) error
 
 	// GetByID 根据ID获取角色
-	GetByID(ctx context.Context, id string) (*entity.Role, error)
+	GetByID(ctx context.Context, id uint) (*entity.Role, error)
 
 	// GetByCode 根据代码获取角色
 	GetByCode(ctx context.Context, code string) (*entity.Role, error)
@@ -23,14 +23,14 @@ type RoleRepository interface {
 	Update(ctx context.Context, role *entity.Role) error
 
 	// Delete 删除角色
-	Delete(ctx context.Context, id string) error
+	Delete(ctx context.Context, id uint) error
 
 	// GetByUserID 根据用户ID获取角色列表
-	GetByUserID(ctx context.Context, userID string) ([]*entity.Role, error)
+	GetByUserID(ctx context.Context, userID uint) ([]*entity.Role, error)
 
 	// AssignToUser 为用户分配角色
-	AssignToUser(ctx context.Context, userID string, roleIDs []string) error
+	AssignToUser(ctx context.Context, userID uint, roleIDs []uint) error
 
 	// RemoveFromUser 移除用户角色
-	RemoveFromUser(ctx context.Context, userID string, roleIDs []string) error
+	RemoveFromUser(ctx context.Context, userID uint, roleIDs []uint) error
 }

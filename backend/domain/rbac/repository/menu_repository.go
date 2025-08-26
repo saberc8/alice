@@ -11,7 +11,7 @@ type MenuRepository interface {
 	Create(ctx context.Context, menu *entity.Menu) error
 
 	// GetByID 根据ID获取菜单
-	GetByID(ctx context.Context, id string) (*entity.Menu, error)
+	GetByID(ctx context.Context, id uint) (*entity.Menu, error)
 
 	// GetByCode 根据代码获取菜单
 	GetByCode(ctx context.Context, code string) (*entity.Menu, error)
@@ -26,23 +26,23 @@ type MenuRepository interface {
 	Update(ctx context.Context, menu *entity.Menu) error
 
 	// Delete 删除菜单
-	Delete(ctx context.Context, id string) error
+	Delete(ctx context.Context, id uint) error
 
 	// GetByUserID 根据用户ID获取菜单列表
-	GetByUserID(ctx context.Context, userID string) ([]*entity.Menu, error)
+	GetByUserID(ctx context.Context, userID uint) ([]*entity.Menu, error)
 
 	// GetTreeByUserID 根据用户ID获取菜单树
-	GetTreeByUserID(ctx context.Context, userID string) ([]*entity.Menu, error)
+	GetTreeByUserID(ctx context.Context, userID uint) ([]*entity.Menu, error)
 
 	// GetByRoleID 根据角色ID获取菜单列表
-	GetByRoleID(ctx context.Context, roleID string) ([]*entity.Menu, error)
+	GetByRoleID(ctx context.Context, roleID uint) ([]*entity.Menu, error)
 
 	// AssignToRole 为角色分配菜单
-	AssignToRole(ctx context.Context, roleID string, menuIDs []string) error
+	AssignToRole(ctx context.Context, roleID uint, menuIDs []uint) error
 
 	// RemoveFromRole 移除角色菜单
-	RemoveFromRole(ctx context.Context, roleID string, menuIDs []string) error
+	RemoveFromRole(ctx context.Context, roleID uint, menuIDs []uint) error
 
 	// GetChildren 获取子菜单
-	GetChildren(ctx context.Context, parentID string) ([]*entity.Menu, error)
+	GetChildren(ctx context.Context, parentID uint) ([]*entity.Menu, error)
 }

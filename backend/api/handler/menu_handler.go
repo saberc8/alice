@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 
 	"alice/api/model"
 	"alice/domain/rbac/service"
@@ -64,13 +65,17 @@ func (h *MenuHandler) CreateMenu(c *gin.Context) {
 // @Failure 500 {object} model.APIResponse
 // @Router /menus/{id} [get]
 func (h *MenuHandler) GetMenu(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
+	idStr := c.Param("id")
+	if idStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "菜单ID不能为空"))
 		return
 	}
-
-	menu, err := h.menuService.GetMenu(c.Request.Context(), id)
+	idVal, errConv := strconv.ParseUint(idStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "菜单ID格式错误"))
+		return
+	}
+	menu, err := h.menuService.GetMenu(c.Request.Context(), uint(idVal))
 	if err != nil {
 		logger.Errorf("获取菜单失败: %v", err)
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))
@@ -134,9 +139,14 @@ func (h *MenuHandler) GetMenuTree(c *gin.Context) {
 // @Failure 500 {object} model.APIResponse
 // @Router /menus/{id} [put]
 func (h *MenuHandler) UpdateMenu(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
+	idStr := c.Param("id")
+	if idStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "菜单ID不能为空"))
+		return
+	}
+	idVal, errConv := strconv.ParseUint(idStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "菜单ID格式错误"))
 		return
 	}
 
@@ -147,7 +157,7 @@ func (h *MenuHandler) UpdateMenu(c *gin.Context) {
 		return
 	}
 
-	req.ID = id
+	req.ID = uint(idVal)
 
 	if err := h.menuService.UpdateMenu(c.Request.Context(), &req); err != nil {
 		logger.Errorf("更新菜单失败: %v", err)
@@ -170,13 +180,17 @@ func (h *MenuHandler) UpdateMenu(c *gin.Context) {
 // @Failure 500 {object} model.APIResponse
 // @Router /menus/{id} [delete]
 func (h *MenuHandler) DeleteMenu(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
+	idStr := c.Param("id")
+	if idStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "菜单ID不能为空"))
 		return
 	}
-
-	if err := h.menuService.DeleteMenu(c.Request.Context(), id); err != nil {
+	idVal, errConv := strconv.ParseUint(idStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "菜单ID格式错误"))
+		return
+	}
+	if err := h.menuService.DeleteMenu(c.Request.Context(), uint(idVal)); err != nil {
 		logger.Errorf("删除菜单失败: %v", err)
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
@@ -199,14 +213,18 @@ func (h *MenuHandler) DeleteMenu(c *gin.Context) {
 // @Failure 500 {object} model.APIResponse
 // @Router /roles/{id}/menus [post]
 func (h *MenuHandler) AssignMenusToRole(c *gin.Context) {
-	roleID := c.Param("id")
-	if roleID == "" {
+	roleIDStr := c.Param("id")
+	if roleIDStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "角色ID不能为空"))
 		return
 	}
-
+	roleVal, errConv := strconv.ParseUint(roleIDStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "角色ID格式错误"))
+		return
+	}
 	var req struct {
-		MenuIDs []string `json:"menu_ids" binding:"required"`
+		MenuIDs []uint `json:"menu_ids" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -215,7 +233,7 @@ func (h *MenuHandler) AssignMenusToRole(c *gin.Context) {
 		return
 	}
 
-	if err := h.menuService.AssignMenusToRole(c.Request.Context(), roleID, req.MenuIDs); err != nil {
+	if err := h.menuService.AssignMenusToRole(c.Request.Context(), uint(roleVal), req.MenuIDs); err != nil {
 		logger.Errorf("为角色分配菜单失败: %v", err)
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
@@ -238,14 +256,18 @@ func (h *MenuHandler) AssignMenusToRole(c *gin.Context) {
 // @Failure 500 {object} model.APIResponse
 // @Router /roles/{id}/menus [delete]
 func (h *MenuHandler) RemoveMenusFromRole(c *gin.Context) {
-	roleID := c.Param("id")
-	if roleID == "" {
+	roleIDStr := c.Param("id")
+	if roleIDStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "角色ID不能为空"))
 		return
 	}
-
+	roleVal, errConv := strconv.ParseUint(roleIDStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "角色ID格式错误"))
+		return
+	}
 	var req struct {
-		MenuIDs []string `json:"menu_ids" binding:"required"`
+		MenuIDs []uint `json:"menu_ids" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -254,7 +276,7 @@ func (h *MenuHandler) RemoveMenusFromRole(c *gin.Context) {
 		return
 	}
 
-	if err := h.menuService.RemoveMenusFromRole(c.Request.Context(), roleID, req.MenuIDs); err != nil {
+	if err := h.menuService.RemoveMenusFromRole(c.Request.Context(), uint(roleVal), req.MenuIDs); err != nil {
 		logger.Errorf("移除角色菜单失败: %v", err)
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
@@ -275,13 +297,17 @@ func (h *MenuHandler) RemoveMenusFromRole(c *gin.Context) {
 // @Failure 500 {object} model.APIResponse
 // @Router /roles/{id}/menus [get]
 func (h *MenuHandler) GetRoleMenus(c *gin.Context) {
-	roleID := c.Param("id")
-	if roleID == "" {
+	roleIDStr := c.Param("id")
+	if roleIDStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "角色ID不能为空"))
 		return
 	}
-
-	menus, err := h.menuService.GetRoleMenus(c.Request.Context(), roleID)
+	roleVal, errConv := strconv.ParseUint(roleIDStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "角色ID格式错误"))
+		return
+	}
+	menus, err := h.menuService.GetRoleMenus(c.Request.Context(), uint(roleVal))
 	if err != nil {
 		logger.Errorf("获取角色菜单失败: %v", err)
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))
@@ -303,13 +329,17 @@ func (h *MenuHandler) GetRoleMenus(c *gin.Context) {
 // @Failure 500 {object} model.APIResponse
 // @Router /users/{user_id}/menus [get]
 func (h *MenuHandler) GetUserMenus(c *gin.Context) {
-	userID := c.Param("user_id")
-	if userID == "" {
+	userIDStr := c.Param("user_id")
+	if userIDStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "用户ID不能为空"))
 		return
 	}
-
-	menus, err := h.menuService.GetUserMenus(c.Request.Context(), userID)
+	userVal, errConv := strconv.ParseUint(userIDStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "用户ID格式错误"))
+		return
+	}
+	menus, err := h.menuService.GetUserMenus(c.Request.Context(), uint(userVal))
 	if err != nil {
 		logger.Errorf("获取用户菜单失败: %v", err)
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))
@@ -331,13 +361,17 @@ func (h *MenuHandler) GetUserMenus(c *gin.Context) {
 // @Failure 500 {object} model.APIResponse
 // @Router /users/{user_id}/menus/tree [get]
 func (h *MenuHandler) GetUserMenuTree(c *gin.Context) {
-	userID := c.Param("user_id")
-	if userID == "" {
+	userIDStr := c.Param("user_id")
+	if userIDStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "用户ID不能为空"))
 		return
 	}
-
-	tree, err := h.menuService.GetUserMenuTree(c.Request.Context(), userID)
+	userVal, errConv := strconv.ParseUint(userIDStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "用户ID格式错误"))
+		return
+	}
+	tree, err := h.menuService.GetUserMenuTree(c.Request.Context(), uint(userVal))
 	if err != nil {
 		logger.Errorf("获取用户菜单树失败: %v", err)
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))
@@ -359,13 +393,17 @@ func (h *MenuHandler) GetUserMenuTree(c *gin.Context) {
 // @Failure 500 {object} model.APIResponse
 // @Router /roles/{id}/menus/tree [get]
 func (h *MenuHandler) GetRoleMenuTree(c *gin.Context) {
-	roleID := c.Param("id")
-	if roleID == "" {
+	roleIDStr := c.Param("id")
+	if roleIDStr == "" {
 		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "角色ID不能为空"))
 		return
 	}
-
-	tree, err := h.menuService.GetRoleMenuTree(c.Request.Context(), roleID)
+	roleVal, errConv := strconv.ParseUint(roleIDStr, 10, 64)
+	if errConv != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorResponse(http.StatusBadRequest, "角色ID格式错误"))
+		return
+	}
+	tree, err := h.menuService.GetRoleMenuTree(c.Request.Context(), uint(roleVal))
 	if err != nil {
 		logger.Errorf("获取角色菜单树失败: %v", err)
 		c.JSON(http.StatusInternalServerError, model.ErrorResponse(http.StatusInternalServerError, err.Error()))

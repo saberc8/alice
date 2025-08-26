@@ -14,13 +14,13 @@ const (
 
 // Role 角色实体
 type Role struct {
-	ID          string     `json:"id" gorm:"primaryKey;type:varchar(36)"`
+	ID          uint       `json:"id" gorm:"primaryKey;autoIncrement"`
 	Name        string     `json:"name" gorm:"not null;size:100"`
 	Code        string     `json:"code" gorm:"uniqueIndex;not null;size:100"`
 	Description *string    `json:"description" gorm:"size:500"`
 	Status      RoleStatus `json:"status" gorm:"not null;default:'active'"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	CreatedAt   time.Time  `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt   time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
 // TableName 指定表名

@@ -87,8 +87,8 @@ func (m *MenuMeta) Scan(value interface{}) error {
 
 // Menu 菜单实体
 type Menu struct {
-	ID          string     `json:"id" gorm:"primaryKey;type:varchar(36)"`
-	ParentID    *string    `json:"parent_id" gorm:"type:varchar(36);index"`
+	ID          uint       `json:"id" gorm:"primaryKey;autoIncrement"`
+	ParentID    *uint      `json:"parent_id" gorm:"index"`
 	Name        string     `json:"name" gorm:"not null;size:100"`
 	Code        string     `json:"code" gorm:"uniqueIndex;not null;size:100"`
 	Path        *string    `json:"path" gorm:"size:200"`
@@ -97,8 +97,8 @@ type Menu struct {
 	Status      MenuStatus `json:"status" gorm:"not null;default:'active'"`
 	Meta        MenuMeta   `json:"meta" gorm:"type:json"`
 	Description *string    `json:"description" gorm:"size:500"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	CreatedAt   time.Time  `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt   time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
 
 	// 关联关系
 	Children []*Menu `json:"children,omitempty" gorm:"-"`

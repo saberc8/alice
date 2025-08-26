@@ -44,7 +44,7 @@ type UserListResponse struct {
 
 // RoleBrief 精简角色信息（用于 Profile 下发）
 type RoleBrief struct {
-	ID   string `json:"id"`
+	ID   uint   `json:"id"`
 	Name string `json:"name"`
 	Code string `json:"code"`
 }

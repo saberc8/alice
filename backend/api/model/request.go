@@ -20,9 +20,9 @@ type UpdateProfileRequest struct {
 
 // AssignIDsRequest 通用批量ID分配请求
 type AssignIDsRequest struct {
-	RoleIDs       []string `json:"role_ids" example:"1,2"`
-	PermissionIDs []string `json:"permission_ids" example:"1,2"`
-	MenuIDs       []string `json:"menu_ids" example:"1,2"`
+	RoleIDs       []uint `json:"role_ids" example:"1,2"`
+	PermissionIDs []uint `json:"permission_ids" example:"1,2"`
+	MenuIDs       []uint `json:"menu_ids" example:"1,2"`
 }
 
 // AdminCreateUserRequest 管理员新增用户

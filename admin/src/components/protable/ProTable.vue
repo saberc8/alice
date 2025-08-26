@@ -7,6 +7,9 @@ const emits = defineEmits(['refresh'])
 
 const loading = ref(false)
 const data = ref<any[]>([])
+const total = ref(0)
+const page = ref(1)
+const pageSize = ref(props.pageSize || 10)
 const searchModel = ref<Record<string, any>>({})
 
 const rowKey = computed(() => props.rowKey || 'id')
@@ -14,7 +17,19 @@ const rowKey = computed(() => props.rowKey || 'id')
 async function fetch() {
   loading.value = true
   try {
-    data.value = await props.request({ ...(searchModel.value || {}) })
+    const params: any = { ...(searchModel.value || {}) }
+    if (!props.isTree && props.pagination !== false) {
+      params.page = page.value
+      params.page_size = pageSize.value
+    }
+    const result = await props.request(params)
+    if (Array.isArray(result)) {
+      data.value = result
+      if (!props.isTree && props.pagination !== false) total.value = result.length
+    } else if (result && typeof result === 'object') {
+      data.value = result.list
+      total.value = result.total || result.list.length
+    }
   } finally {
     loading.value = false
   }
@@ -99,7 +114,7 @@ const formColumns = computed(() => safeColumns.value.filter((c) => (c as any).fo
         <a-form-item>
           <a-space>
             <a-button type="primary" @click="fetch">查询</a-button>
-            <a-button @click="() => {searchModel.value = {}; fetch()}" status="warning">重置</a-button>
+            <a-button @click="() => {searchModel.value = {}; page.value = 1; fetch()}" status="warning">重置</a-button>
           </a-space>
         </a-form-item>
         <a-form-item v-if="props.onCreate">
@@ -141,6 +156,20 @@ const formColumns = computed(() => safeColumns.value.filter((c) => (c as any).fo
         </a-table-column>
       </template>
     </a-table>
+
+    <!-- 分页 -->
+    <div v-if="!props.isTree && props.pagination !== false" style="margin-top:12px; text-align:right;">
+      <a-pagination
+        :total="total"
+        :current="page"
+        :page-size="pageSize"
+        show-total
+        show-jumper
+        show-page-size
+        @change="(p:number)=>{ page.value = p; fetch() }"
+        @page-size-change="(s:number)=>{ pageSize.value = s; page.value = 1; fetch() }"
+      />
+    </div>
 
     <!-- 创建/编辑弹窗 -->
     <a-modal v-model:visible="visible" :title="isEdit ? '编辑' : '新建'" @ok="onSubmit">

@@ -65,8 +65,13 @@ func main() {
 		log.Fatal("Failed to init permissions:", err)
 	}
 
-	// 创建 admin 超级管理员并分配所有角色/权限/菜单
-	if err := initAdminUser(ctx, db, userService, roleService, permissionService, menuService); err != nil {
+	// 确保 super_admin 角色拥有全部菜单与权限（即使 admin 用户已存在也要执行）
+	if err := ensureSuperAdminGrants(ctx, db); err != nil {
+		log.Fatal("Failed to grant all menus & permissions to super_admin:", err)
+	}
+
+	// 创建/补全 admin 超级管理员及其角色绑定
+	if err := initAdminUser(ctx, db, userService, roleService); err != nil {
 		log.Fatal("Failed to init admin user:", err)
 	}
 
@@ -99,8 +104,6 @@ func initAdminUser(
 	db *gorm.DB,
 	userService userServicePkg.UserService,
 	roleService rbacService.RoleService,
-	permissionService rbacService.PermissionService,
-	menuService rbacService.MenuService,
 ) error {
 	const (
 		adminUsername = "admin"
@@ -108,63 +111,47 @@ func initAdminUser(
 		adminEmail    = "admin@example.com"
 	)
 
-	// 如果已存在则跳过
-	var existing userEntity.User
-	if err := db.Where("username = ?", adminUsername).First(&existing).Error; err == nil {
-		fmt.Println("admin 用户已存在，跳过创建")
-		return nil
+	var user userEntity.User
+	if err := db.Where("username = ?", adminUsername).First(&user).Error; err != nil {
+		// 不存在则创建
+		if err == gorm.ErrRecordNotFound {
+			hash, e := bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.DefaultCost)
+			if e != nil {
+				return fmt.Errorf("生成密码哈希失败: %w", e)
+			}
+			user = userEntity.User{Username: adminUsername, Email: adminEmail, PasswordHash: string(hash), Status: userEntity.UserStatusActive}
+			if e = db.Create(&user).Error; e != nil {
+				return fmt.Errorf("创建 admin 用户失败: %w", e)
+			}
+			fmt.Println("创建 admin 用户成功, ID=", user.ID)
+		} else {
+			return fmt.Errorf("查询 admin 用户失败: %w", err)
+		}
+	} else {
+		fmt.Println("admin 用户已存在, ID=", user.ID)
 	}
 
-	// 手动创建（避免 Register 逻辑修改 email 唯一校验外的流程变化）
-	hash, err := bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.DefaultCost)
-	if err != nil {
-		return fmt.Errorf("生成密码哈希失败: %w", err)
-	}
-	user := &userEntity.User{Username: adminUsername, Email: adminEmail, PasswordHash: string(hash), Status: userEntity.UserStatusActive}
-	if err := db.Create(user).Error; err != nil {
-		return fmt.Errorf("创建 admin 用户失败: %w", err)
-	}
-	fmt.Println("创建 admin 用户成功, ID=", user.ID)
-
-	// 读取 super_admin 角色 ID
+	// super_admin 角色
 	superRole, err := repository.NewRoleRepository(db).GetByCode(ctx, "super_admin")
 	if err != nil || superRole == nil {
 		return fmt.Errorf("获取 super_admin 角色失败: %v", err)
 	}
 
-	// 给 admin 分配 super_admin 角色
-	if err := repository.NewRoleRepository(db).AssignToUser(ctx, fmt.Sprintf("%d", user.ID), []string{superRole.ID}); err != nil {
-		return fmt.Errorf("为 admin 分配 super_admin 角色失败: %w", err)
+	// 检查是否已有该角色
+	var count int64
+	if err := db.Model(&entity.UserRole{}).
+		Where("user_id = ? AND role_id = ?", user.ID, superRole.ID).
+		Count(&count).Error; err != nil {
+		return fmt.Errorf("检查用户角色失败: %w", err)
 	}
-	fmt.Println("已为 admin 分配 super_admin 角色")
-
-	// 获取全部权限并分配给 super_admin 角色
-	perms, _, err := repository.NewPermissionRepository(db).List(ctx, 0, 1000)
-	if err != nil {
-		return fmt.Errorf("获取权限列表失败: %w", err)
+	if count == 0 {
+		if err := repository.NewRoleRepository(db).AssignToUser(ctx, user.ID, []uint{superRole.ID}); err != nil {
+			return fmt.Errorf("为 admin 分配 super_admin 角色失败: %w", err)
+		}
+		fmt.Println("已为 admin 分配 super_admin 角色")
+	} else {
+		fmt.Println("admin 已拥有 super_admin 角色")
 	}
-	var permIDs []string
-	for _, p := range perms {
-		permIDs = append(permIDs, p.ID)
-	}
-	if err := repository.NewPermissionRepository(db).AssignToRole(ctx, superRole.ID, permIDs); err != nil {
-		return fmt.Errorf("为 super_admin 分配全部权限失败: %w", err)
-	}
-	fmt.Println("已为 super_admin 角色分配全部权限 (", len(permIDs), ")")
-
-	// 获取全部菜单并分配给 super_admin 角色
-	menus, err := repository.NewMenuRepository(db).List(ctx)
-	if err != nil {
-		return fmt.Errorf("获取菜单列表失败: %w", err)
-	}
-	var menuIDs []string
-	for _, m := range menus {
-		menuIDs = append(menuIDs, m.ID)
-	}
-	if err := repository.NewMenuRepository(db).AssignToRole(ctx, superRole.ID, menuIDs); err != nil {
-		return fmt.Errorf("为 super_admin 分配全部菜单失败: %w", err)
-	}
-	fmt.Println("已为 super_admin 角色分配全部菜单 (", len(menuIDs), ")")
 
 	return nil
 }
@@ -172,7 +159,7 @@ func initAdminUser(
 // initPermissions 初始化权限
 func initPermissions(ctx context.Context, db *gorm.DB, permissionService rbacService.PermissionService) error {
 	// 通过菜单 code 查 ID
-	getMenuID := func(code string) *string {
+	getMenuID := func(code string) *uint {
 		m, err := repository.NewMenuRepository(db).GetByCode(ctx, code)
 		if err != nil || m == nil {
 			return nil
@@ -196,6 +183,13 @@ func initPermissions(ctx context.Context, db *gorm.DB, permissionService rbacSer
 		{Name: "角色-权限查询", Code: "system:role:permissions:get", MenuID: getMenuID("system:roles"), Resource: "role_permissions", Action: "get", Status: entity.PermissionStatusActive},
 
 		// 用户管理 (system:users)
+		// —— 缺失的用户 CRUD 权限（与路由中使用的 system:user:list 等保持一致）
+		{Name: "用户-查询", Code: "system:user:list", MenuID: getMenuID("system:users"), Resource: "user", Action: "list", Status: entity.PermissionStatusActive},
+		{Name: "用户-详情", Code: "system:user:get", MenuID: getMenuID("system:users"), Resource: "user", Action: "get", Status: entity.PermissionStatusActive},
+		{Name: "用户-创建", Code: "system:user:create", MenuID: getMenuID("system:users"), Resource: "user", Action: "create", Status: entity.PermissionStatusActive},
+		{Name: "用户-更新", Code: "system:user:update", MenuID: getMenuID("system:users"), Resource: "user", Action: "update", Status: entity.PermissionStatusActive},
+		{Name: "用户-删除", Code: "system:user:delete", MenuID: getMenuID("system:users"), Resource: "user", Action: "delete", Status: entity.PermissionStatusActive},
+		// —— 角色/权限关系相关（保留原有）
 		{Name: "用户-角色查询", Code: "system:user:roles:get", MenuID: getMenuID("system:users"), Resource: "user_roles", Action: "get", Status: entity.PermissionStatusActive},
 		{Name: "用户-分配角色", Code: "system:user:roles:assign", MenuID: getMenuID("system:users"), Resource: "user_roles", Action: "assign", Status: entity.PermissionStatusActive},
 		{Name: "用户-移除角色", Code: "system:user:roles:remove", MenuID: getMenuID("system:users"), Resource: "user_roles", Action: "remove", Status: entity.PermissionStatusActive},
@@ -266,7 +260,7 @@ func initMenus(ctx context.Context, db *gorm.DB, menuService rbacService.MenuSer
 	}
 
 	// 修正分组 type（见原注释说明）
-	if err := db.Model(&entity.Menu{}).Where("id IN ?", []string{dashboardGroup.ID, systemGroup.ID}).Update("type", entity.MenuTypeGroup).Error; err != nil {
+	if err := db.Model(&entity.Menu{}).Where("id IN ?", []uint{dashboardGroup.ID, systemGroup.ID}).Update("type", entity.MenuTypeGroup).Error; err != nil {
 		return fmt.Errorf("修正分组菜单类型失败: %w", err)
 	}
 
@@ -280,7 +274,7 @@ func initMenus(ctx context.Context, db *gorm.DB, menuService rbacService.MenuSer
 		Order:    1,
 		Status:   entity.MenuStatusActive,
 		Meta: entity.MenuMeta{
-			Icon:      stringPtr("local:ic-workbench"),
+			Icon:      stringPtr("solar:atom-bold-duotone"),
 			Component: stringPtr("views/dashboard/workbench"),
 		},
 	})
@@ -375,23 +369,67 @@ func stringPtr(s string) *string {
 
 // cleanExistingData 清理现有数据
 func cleanExistingData(db *gorm.DB) error {
-	fmt.Println("开始清理现有数据...")
+	fmt.Println("开始清理 RBAC 相关数据 (TRUNCATE + RESTART IDENTITY)...")
 
-	// 删除菜单数据（由于外键约束，需要先删除子菜单）
-	if err := db.Exec("DELETE FROM menus").Error; err != nil {
-		return fmt.Errorf("清理菜单数据失败: %w", err)
+	// 依赖关系：
+	// user_roles -> users, roles
+	// role_permissions -> roles, permissions
+	// role_menus -> roles, menus
+	// permissions -> menus (menu_id 可空)
+	// menus(自关联 parent_id)
+	// roles 独立
+	// 统一用 TRUNCATE 级联 + 重置序列
+	// 注意：仅重置 RBAC 相关表，不影响用户主表 (users)；如果希望连同 admin 重建，可自行加入 users
+	if err := db.Exec(`TRUNCATE TABLE 
+		role_menus,
+		role_permissions,
+		user_roles,
+		permissions,
+		menus,
+		roles
+		RESTART IDENTITY CASCADE`).Error; err != nil {
+		return fmt.Errorf("TRUNCATE RBAC 表失败: %w", err)
 	}
 
-	// 删除权限数据
-	if err := db.Exec("DELETE FROM permissions").Error; err != nil {
-		return fmt.Errorf("清理权限数据失败: %w", err)
+	fmt.Println("RBAC 表已清空并重置自增 ID")
+	return nil
+}
+
+// ensureSuperAdminGrants 确保 super_admin 角色拥有全部菜单和权限
+func ensureSuperAdminGrants(ctx context.Context, db *gorm.DB) error {
+	roleRepo := repository.NewRoleRepository(db)
+	permRepo := repository.NewPermissionRepository(db)
+	menuRepo := repository.NewMenuRepository(db)
+
+	superRole, err := roleRepo.GetByCode(ctx, "super_admin")
+	if err != nil || superRole == nil {
+		return fmt.Errorf("未找到 super_admin 角色: %v", err)
 	}
 
-	// 删除角色数据
-	if err := db.Exec("DELETE FROM roles").Error; err != nil {
-		return fmt.Errorf("清理角色数据失败: %w", err)
+	perms, _, err := permRepo.List(ctx, 0, 5000)
+	if err != nil {
+		return fmt.Errorf("获取全部权限失败: %w", err)
+	}
+	var permIDs []uint
+	for _, p := range perms {
+		permIDs = append(permIDs, p.ID)
+	}
+	if err := permRepo.AssignToRole(ctx, superRole.ID, permIDs); err != nil {
+		return fmt.Errorf("分配全部权限给 super_admin 失败: %w", err)
 	}
 
-	fmt.Println("清理现有数据完成")
+	menus, err := menuRepo.List(ctx)
+	if err != nil {
+		return fmt.Errorf("获取全部菜单失败: %w", err)
+	}
+	var menuIDs []uint
+	for _, m := range menus {
+		menuIDs = append(menuIDs, m.ID)
+	}
+	if err := menuRepo.AssignToRole(ctx, superRole.ID, menuIDs); err != nil {
+		return fmt.Errorf("分配全部菜单给 super_admin 失败: %w", err)
+	}
+
+	fmt.Printf("已刷新 super_admin 角色授权: 菜单 %d / 权限 %d\n", len(menuIDs), len(permIDs))
 	return nil
 }
